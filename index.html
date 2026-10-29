@@ -1,0 +1,1200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sprint Board</title>
+<style>
+:root{--bg:#f4f5f7;--surface:#fff;--ink:#1d2733;--mute:#5f6b7a;--line:#d7dce3;--accent:#0b5cad;--amber:#a85f00;--amberbg:#fff4e0;--amberbar:#f0a020;--red:#b3261e;--redbg:#fdecea;--green:#1e7b34;--greenbg:#e8f5ea}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 "Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--surface);border:1px solid var(--line);padding:6px 12px;cursor:pointer;border-radius:0}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{color:#fff;opacity:.92}
+button.small{padding:2px 8px;font-size:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+select,input[type=text],input[type=password],input[type=number]{border:1px solid var(--line);padding:6px 8px;background:#fff;border-radius:0;width:100%}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;position:sticky;top:0;z-index:5}
+header.top h1{font-size:18px;margin:0;font-weight:600}
+.tabs{display:flex;gap:0}
+.tabs button{border-radius:0;margin-right:-1px;padding:6px 16px}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.spacer{flex:1}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px}
+.toolbar label{display:flex;align-items:center;gap:8px}
+.toolbar select{width:auto;min-width:200px}
+.timer{font:600 18px/1 "Consolas","Courier New",monospace;min-width:52px;text-align:center}
+.timer.warn{color:var(--amber)}
+.timer.over{color:var(--red)}
+main{padding:16px 20px 40px}
+.meta{color:var(--mute);font-size:13px}
+.banner{border:1px solid var(--line);border-left:4px solid var(--amberbar);background:var(--amberbg);padding:8px 12px;margin-bottom:10px}
+.banner.err{border-left-color:var(--red);background:var(--redbg)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--line);padding:10px 12px}
+.tile b{display:block;font-size:22px;line-height:1.1}
+.tile span{color:var(--mute);font-size:12px}
+.tile.red b{color:var(--red)}
+.tile.amber b{color:var(--amber)}
+.tile.green b{color:var(--green)}
+.bar{height:6px;background:#e4e8ee;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--green)}
+.filters{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-bottom:12px}
+.filters label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.filters select{width:auto}
+details.since{background:var(--surface);border:1px solid var(--line);margin:14px 0}
+details.since summary{padding:8px 12px;cursor:pointer;font-weight:600}
+details.since .inner{padding:4px 12px 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+details.since h4{margin:6px 0 4px;font-size:13px}
+details.since ul{margin:0;padding-left:18px;font-size:13px}
+.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;align-items:start}
+.col{background:#eceff3;border:1px solid var(--line)}
+.col h2{margin:0;padding:10px 12px;font-size:15px;background:var(--surface);border-bottom:1px solid var(--line)}
+.col h2 small{display:block;font-weight:400;color:var(--mute);font-size:12px;margin-top:2px}
+.col.unassigned h2{border-left:4px solid var(--red)}
+.cards{padding:8px;display:flex;flex-direction:column;gap:8px}
+.card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);padding:8px 10px}
+.card.amber{border-left-color:var(--amberbar)}
+.card.red{border-left-color:var(--red)}
+.card.done{opacity:.62}
+.card.done .title{text-decoration:line-through}
+.r1,.r3{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.title{margin:4px 0;font-weight:600}
+.chip{font-size:11px;padding:1px 6px;border:1px solid var(--line);background:#f7f8fa;white-space:nowrap}
+.chip.bug{background:var(--redbg);border-color:#f1c0bc;color:var(--red)}
+.chip.task{background:#e8f0fa;border-color:#bfd3ee;color:var(--accent)}
+.chip.p1{background:var(--red);border-color:var(--red);color:#fff}
+.chip.p2{background:var(--amberbar);border-color:var(--amberbar);color:#3a2500}
+.chip.blk{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+.chip.pts{font-weight:600}
+.chip.nopts{color:var(--mute);border-style:dashed}
+.chip.ok{background:var(--greenbg);border-color:#b7dcbc;color:var(--green)}
+.chip.warn{background:var(--amberbg);border-color:#f2d199;color:var(--amber)}
+.chip.bad{background:var(--redbg);border-color:#f1c0bc;color:var(--red)}
+.age{font-size:12px;font-weight:600}
+.age.amber{color:var(--amber)}
+.age.red{color:var(--red)}
+.mute{color:var(--mute);font-size:12px}
+.tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px}
+.empty{background:var(--surface);border:1px dashed var(--line);padding:24px;text-align:center}
+.plan{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.panel{background:#eceff3;border:1px solid var(--line)}
+.panel>h2{margin:0;padding:10px 12px;font-size:15px;background:var(--surface);border-bottom:1px solid var(--line)}
+.panel>h2 small{font-weight:400;color:var(--mute);font-size:12px;margin-left:6px}
+.panel .body{padding:8px;display:flex;flex-direction:column;gap:8px}
+.panel .tools{padding:8px 8px 0;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.panel .tools label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.panel .tools select,.panel .tools input[type=text]{width:auto;min-width:130px}
+.row{display:flex;gap:8px;align-items:flex-start}
+.row .grow{flex:1;min-width:0}
+.devhead{font-weight:600;margin:6px 0 0;display:flex;justify-content:space-between}
+.caps{background:var(--surface);border:1px solid var(--line);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.caprow{display:grid;grid-template-columns:110px 1fr 170px;gap:8px;align-items:center}
+.capname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.capbar{position:relative;height:12px;background:#e4e8ee}
+.capbar i{display:block;height:100%}
+.capbar i.ok{background:var(--green)}
+.capbar i.warn{background:var(--amberbar)}
+.capbar i.over{background:var(--red)}
+.capbar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#1d2733}
+.capnum{font-size:12px;display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap}
+.capnum input{width:56px;padding:2px 4px;text-align:right}
+dialog{border:1px solid var(--line);padding:0;max-width:600px;width:calc(100% - 32px);border-radius:0}
+dialog::backdrop{background:rgba(20,28,38,.45)}
+dialog form{padding:16px 18px;max-height:88vh;overflow:auto}
+dialog h3{margin:0 0 10px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fg label{display:block;font-size:12px;color:var(--mute)}
+.fg .full{grid-column:1/-1}
+.fg label span{display:block;margin-bottom:2px}
+.note{font-size:12px;color:var(--mute);margin:8px 0}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.mv pre{margin:0;white-space:pre-wrap;font:12px/1.5 Consolas,"Courier New",monospace;padding:0 12px 12px}
+.mv .bt{padding:0 12px 10px}
+.rep{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.rcard{background:var(--surface);border:1px solid var(--line);padding:12px 14px}
+.rcard.wide{grid-column:1/-1}.rcard{min-width:0}.rcard .tw{overflow-x:auto}
+.rcard h2{margin:0 0 4px;font-size:15px}
+.rcard p.sub{margin:0 0 10px;color:var(--mute);font-size:12px}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 170px;gap:8px;align-items:center;margin:5px 0}
+.blab{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bval{font-size:12px;text-align:right}
+.track{display:flex;height:14px;background:#e4e8ee}
+.track span{display:block;height:100%}
+.s-planned,.s-task,.s-test{background:#0b5cad}
+.s-added,.s-wait{background:#f0a020}
+.s-done{background:#1e7b34}
+.s-bug{background:#b3261e}
+.s-cause{background:#5f6b7a}
+.lg{display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--mute)}
+.lg i{display:inline-block;width:10px;height:10px}
+table.rt{width:100%;border-collapse:collapse;font-size:13px}
+table.rt th,table.rt td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+table.rt th{background:#f7f8fa;font-size:12px}
+table.rt td.n,table.rt th.n{text-align:right;white-space:nowrap}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:6px 0 10px}
+.kv div{border:1px solid var(--line);padding:6px 8px;background:#f7f8fa}
+.kv b{display:block;font-size:18px}
+.kv span{font-size:12px;color:var(--mute)}
+@media (max-width:900px){.plan{grid-template-columns:1fr}.rep{grid-template-columns:minmax(0,1fr)}.caprow{grid-template-columns:90px 1fr 150px}.brow{grid-template-columns:90px minmax(0,1fr) 120px}}
+@media (max-width:600px){.fg{grid-template-columns:1fr}.toolbar select{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Sprint Board</h1>
+  <nav class="tabs" aria-label="Views"><button id="tabStand" type="button" class="on">Stand-up</button><button id="tabPlan" type="button">Planning</button><button id="tabRep" type="button">Reporting</button></nav>
+  <div class="spacer"></div>
+  <span id="timerBox" style="display:flex;gap:8px;align-items:center"><span id="timer" class="timer" role="timer">15:00</span><button id="tbtn" type="button">Start 15:00</button></span>
+  <button id="refresh" type="button" class="primary">Refresh</button>
+  <button id="settingsBtn" type="button">Settings</button>
+  <button id="demoBtn" type="button">Demo data</button>
+</header>
+
+<main id="viewStand">
+  <div class="toolbar"><label>Sprint <select id="iter" aria-label="Sprint"></select></label><span id="status" class="meta" aria-live="polite"></span></div>
+  <div id="warn"></div>
+  <section id="summary" class="tiles"></section>
+  <section class="filters" id="filters" hidden>
+    <label><input type="checkbox" id="fDone"> Show done</label>
+    <label><input type="checkbox" id="fBlocked"> Blocked only</label>
+    <label><input type="checkbox" id="fStale"> Stale only</label>
+    <label>Developer <select id="fDev"><option value="">Everyone</option></select></label>
+  </section>
+  <div id="since"></div>
+  <section id="board"></section>
+</main>
+
+<main id="viewPlan" hidden>
+  <div class="toolbar">
+    <label>Planning sprint <select id="planIter" aria-label="Planning sprint"></select></label>
+    <label>Effort in <select id="unit" style="min-width:0"><option value="h">Hours</option><option value="p">Story points</option></select></label>
+    <label><input type="checkbox" id="onlyReady"> Only ready items can be added</label>
+    <span id="planStatus" class="meta" aria-live="polite"></span>
+  </div>
+  <div id="planWarn"></div>
+  <section id="planTiles" class="tiles"></section>
+  <div class="plan">
+    <section class="panel">
+      <h2>Backlog<small id="blCount"></small></h2>
+      <div class="tools">
+        <label>Show <select id="blSource"><option value="all">Backlog and current sprint</option><option value="backlog">Backlog only</option><option value="current">Rolling over from current sprint</option></select></label>
+        <label>Sort <select id="blSort"><option value="rank">Priority, severity, oldest</option><option value="oldest">Oldest first</option><option value="largest">Largest first</option></select></label>
+        <label><input type="checkbox" id="blReady"> Ready only</label>
+        <label><input type="checkbox" id="blStale"> Stale only</label>
+        <input type="text" id="blSearch" placeholder="Search title or number" aria-label="Search backlog">
+      </div>
+      <div class="body" id="backlogList"></div>
+    </section>
+    <section class="panel">
+      <h2>Proposed sprint<small id="propCount"></small></h2>
+      <div class="body">
+        <div class="caps" id="capBars"></div>
+        <div id="draftList" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </section>
+  </div>
+  <details class="since mv" id="moves"><summary id="movesSum">Changes to make in Azure DevOps</summary><div id="movesBody"></div></details>
+</main>
+
+<main id="viewRep" hidden>
+  <div class="toolbar"><span id="repInfo" class="meta"></span><span id="repStatus" class="meta" aria-live="polite"></span></div>
+  <div id="repWarn"></div>
+  <section id="repTiles" class="tiles"></section>
+  <div id="repBody" class="rep"></div>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <h3>Settings</h3>
+    <div class="fg">
+      <label><span>Organisation</span><input type="text" id="s_org" autocomplete="off"></label>
+      <label><span>Project</span><input type="text" id="s_project" autocomplete="off"></label>
+      <label class="full"><span>Area path (only items under this path are shown)</span><input type="text" id="s_area" autocomplete="off"></label>
+      <label class="full"><span>Work item types (comma separated)</span><input type="text" id="s_types" autocomplete="off"></label>
+      <label class="full"><span>Personal access token (needs Work Items: Read only)</span><input type="password" id="s_pat" autocomplete="off"></label>
+      <label class="full" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="s_remember" style="width:auto"> <span style="margin:0">Remember the token on this computer (otherwise it is forgotten when the tab closes)</span></label>
+      <label><span>Story points field</span><input type="text" id="s_points" list="dlNum"></label>
+      <label><span>Remaining work field</span><input type="text" id="s_rem" list="dlNum"></label>
+      <label><span>Original estimate field</span><input type="text" id="s_orig" list="dlNum"></label>
+      <label><span>Priority field</span><input type="text" id="s_pri" list="dlAll"></label>
+      <label><span>Severity field</span><input type="text" id="s_sev" list="dlAll"></label>
+      <label><span>State change date field</span><input type="text" id="s_sc" list="dlAll"></label>
+      <label><span>Tag that marks an item as blocked</span><input type="text" id="s_blocked"></label>
+      <label><span>Amber after (working days in same state)</span><input type="number" id="s_amber" min="1"></label>
+      <label><span>Red after (working days in same state)</span><input type="number" id="s_red" min="1"></label>
+      <label class="full"><span>Backlog iteration path (where approved but unscheduled work is parked)</span><input type="text" id="s_backlog" autocomplete="off"></label>
+      <label><span>Backlog item is stale after (working days)</span><input type="number" id="s_stale" min="1"></label>
+      <label><span>Commit line (% of capacity)</span><input type="number" id="s_commit" min="1" max="100"></label>
+      <label><span>Default capacity per developer (hours a week)</span><input type="number" id="s_caph" min="0"></label>
+      <label><span>Default capacity per developer (story points a week)</span><input type="number" id="s_capp" min="0"></label>
+      <label><span>Sprints shown in reporting</span><input type="number" id="s_rsp" min="2" max="26"></label>
+      <label><span>Tag that marks backlog items</span><input type="text" id="s_btag"></label>
+      <label class="full"><span>QA waiting states (comma separated)</span><input type="text" id="s_qaw"></label>
+      <label class="full"><span>QA testing states (comma separated). If you only have one QA state, put it here.</span><input type="text" id="s_qat"></label>
+      <label><span>Root cause field</span><input type="text" id="s_root" list="dlAll"></label>
+      <label><span>Completed work (hours) field</span><input type="text" id="s_comp" list="dlNum"></label>
+    </div>
+    <datalist id="dlNum"></datalist><datalist id="dlAll"></datalist>
+    <p class="note">This page only reads from Azure DevOps. The token is sent only to dev.azure.com and never leaves this browser. Field lists fill in after the first successful connection. The 30 hours default comes from your timesheet export (about 30 hours a week booked to tickets per person, weeks 35 to 42); points capacity stays at 0 until you have calibrated it.</p>
+    <div class="actions">
+      <button type="button" id="forget">Forget token</button>
+      <button type="button" id="cancel">Cancel</button>
+      <button type="submit" class="primary" id="save" value="save">Save and load</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var KEY='sprintBoard.settings.v1',PATKEY='sprintBoard.pat',SNAPKEY='sprintBoard.snap.v1',DRAFTKEY='sprintBoard.draft.v1';
+var DEFAULTS={org:'SolvemCon',project:'Solvem - SDLC',area:'Solvem - SDLC\\Development Team',types:'Bug, Task',
+  fPoints:'Microsoft.VSTS.Scheduling.StoryPoints',fRemaining:'Microsoft.VSTS.Scheduling.RemainingWork',fOriginal:'Microsoft.VSTS.Scheduling.OriginalEstimate',
+  fPriority:'Microsoft.VSTS.Common.Priority',fSeverity:'Microsoft.VSTS.Common.Severity',
+  fStateChange:'Microsoft.VSTS.Common.StateChangeDate',blockedTag:'Blocked',amberDays:3,redDays:7,
+  backlogIter:'Solvem - SDLC\\Unallocated Pool',staleDays:20,commitPct:80,capH:30,capP:0,unit:'h',onlyReady:false,caps:{},
+  reportSprints:8,backlogTag:'Backlog',qaWait:'Ready for QA',qaTest:'In QA, QA, Testing',fRoot:'Custom.RootCause',fCompleted:'Microsoft.VSTS.Scheduling.CompletedWork'};
+
+function sget(k,st){try{return JSON.parse((st||localStorage).getItem(k))}catch(e){return null}}
+function sset(k,v,st){try{(st||localStorage).setItem(k,JSON.stringify(v))}catch(e){}}
+function sdel(k,st){try{(st||localStorage).removeItem(k)}catch(e){}}
+
+var cfg=Object.assign({},DEFAULTS,sget(KEY)||{});
+if(!cfg.caps||typeof cfg.caps!=='object')cfg.caps={};
+var fieldMeta={},iterations=[],stateCats={},isDemo=false,view='stand';
+var selectedIter='',items=[],loading=false,sprintInfo=null,prevInfo=null;
+var filt={done:false,blocked:false,stale:false,dev:''};
+var planTarget='',planInfo=null,pool=[],planLoading=false,depsKnown=false,draft={added:{},removed:{}},bl={source:'all',sort:'rank',ready:false,stale:false,q:''};
+
+function getPat(){return sget(PATKEY,sessionStorage)||sget(PATKEY,localStorage)||''}
+function enc(s){return encodeURIComponent(s)}
+
+/* ---------- dates ---------- */
+function atMidnight(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function bizDays(a,b){var n=0,d=atMidnight(a),e=atMidnight(b);while(d<e){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)n++}return n}
+function bizSpan(a,b){var n=0,d=atMidnight(a),e=atMidnight(b);while(d<=e){var w=d.getDay();if(w!==0&&w!==6)n++;d.setDate(d.getDate()+1)}return n}
+function isoDay(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(x<10?'0':'')+x}
+function fmt(d){return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})}
+
+/* ---------- api ---------- */
+async function api(path,opts){
+  opts=opts||{};
+  var pat=getPat();
+  if(!pat)throw new Error('Add your personal access token in Settings first.');
+  var url='https://dev.azure.com/'+enc(cfg.org)+'/'+enc(cfg.project)+'/_apis/'+path;
+  var res;
+  try{
+    res=await fetch(url,{method:opts.method||'GET',headers:{'Authorization':'Basic '+btoa(':'+pat),'Content-Type':'application/json','Accept':'application/json'},body:opts.body?JSON.stringify(opts.body):undefined});
+  }catch(e){
+    throw new Error('Could not reach dev.azure.com. Check your connection. If you opened this file straight from disk and it still fails, host it on your GitHub Pages like your other dashboards.');
+  }
+  if(res.status===401||res.status===203)throw new Error('Azure DevOps rejected the sign-in. Check the token, its expiry, and that it has Work Items: Read.');
+  if(!res.ok){var m=res.statusText;try{var j=await res.json();m=j.message||m}catch(e){}throw new Error(res.status+': '+m)}
+  return res.json();
+}
+function cleanPath(p){var parts=p.split('\\').filter(Boolean);if(parts[1]==='Iteration')parts.splice(1,1);return parts.join('\\')}
+function flatten(node,out){
+  if(node.attributes&&node.attributes.startDate&&node.attributes.finishDate){
+    out.push({name:node.name,path:cleanPath(node.path),start:new Date(node.attributes.startDate),finish:new Date(node.attributes.finishDate)});
+  }
+  (node.children||[]).forEach(function(c){flatten(c,out)});
+}
+async function loadIterations(){
+  var root=await api('wit/classificationnodes/iterations?$depth=6&api-version=7.1');
+  var out=[];flatten(root,out);
+  out.sort(function(a,b){return b.start-a.start});
+  iterations=out;
+}
+function pickCurrent(){
+  var now=new Date(),best=null;
+  iterations.forEach(function(it){
+    var end=new Date(it.finish.getTime()+86400000);
+    if(it.start<=now&&now<end){if(!best||(it.finish-it.start)<(best.finish-best.start))best=it}
+  });
+  if(!best&&iterations.length){best=iterations.filter(function(i){return i.start<=now})[0]||iterations[iterations.length-1]}
+  return best;
+}
+function nextIter(){
+  var cur=pickCurrent();if(!cur)return null;
+  var later=iterations.filter(function(i){return i.start>cur.start}).sort(function(a,b){return a.start-b.start});
+  return later[0]||cur;
+}
+function optLabel(it,cur,nxt){
+  var tag=cur&&it.path===cur.path?' (current)':(nxt&&it.path===nxt.path&&(!cur||nxt.path!==cur.path)?' (next)':'');
+  return '<option value="'+esc(it.path)+'">'+esc(it.name)+tag+'  ·  '+fmt(it.start)+' – '+fmt(it.finish)+'</option>';
+}
+function fillIterSelects(){
+  var cur=pickCurrent(),nxt=nextIter(),list=iterations.slice(0,24),h=list.map(function(it){return optLabel(it,cur,nxt)}).join('');
+  $('#iter').innerHTML=h;$('#planIter').innerHTML=h;
+  if(!selectedIter&&cur)selectedIter=cur.path;
+  if(!planTarget&&nxt)planTarget=nxt.path;
+  $('#iter').value=selectedIter;$('#planIter').value=planTarget;
+}
+function esq(s){return String(s).replace(/'/g,"''")}
+function typeList(){return cfg.types.split(',').map(function(s){return s.trim()}).filter(Boolean)}
+async function loadStates(types){
+  stateCats={};
+  await Promise.all(types.map(async function(t){
+    try{
+      var r=await api('wit/workitemtypes/'+enc(t)+'/states?api-version=7.1');
+      r.value.forEach(function(s){stateCats[t+'|'+s.name]=s.category});
+    }catch(e){}
+  }));
+}
+async function ensureCore(){
+  var fl=await api('wit/fields?api-version=7.1');
+  fieldMeta={};fl.value.forEach(function(f){fieldMeta[f.referenceName]=f});
+  fillDatalists();
+  if(!iterations.length)await loadIterations();
+  fillIterSelects();
+  await loadStates(typeList());
+}
+function wantedFields(){
+  var warns=[],want=[];
+  [['fPoints','Story points'],['fRemaining','Remaining work'],['fOriginal','Original estimate'],['fPriority','Priority'],['fSeverity','Severity'],['fStateChange','State change date']].forEach(function(p){
+    var ref=cfg[p[0]];
+    if(!ref)return;
+    if(fieldMeta[ref])want.push(ref);
+    else{
+      var msg=p[1]+' field "'+ref+'" does not exist in this project, so it is left blank.';
+      if(p[0]==='fPoints'){
+        var cand=Object.keys(fieldMeta).filter(function(k){var f=fieldMeta[k];return /point|effort|size/i.test(f.name+k)&&(f.type==='integer'||f.type==='double')});
+        if(cand.length)msg+=' Possible matches: '+cand.join(', ')+'.';
+      }
+      warns.push(msg+' Change it in Settings.');
+    }
+  });
+  return {want:want,warns:warns};
+}
+function num(v){return(v===undefined||v===null||v==='')?null:Number(v)}
+function stripHtml(s){return String(s||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim()}
+function norm(w){
+  var F=w.fields,g=function(k){return k?F[k]:undefined};
+  var a=F['System.AssignedTo'],dev=a?(a.displayName||String(a)):'';
+  var tags=(F['System.Tags']||'').split(';').map(function(s){return s.trim()}).filter(Boolean);
+  var type=F['System.WorkItemType'],state=F['System.State'],cat=stateCats[type+'|'+state];
+  var sc=g(cfg.fStateChange)||F['System.ChangedDate'];
+  var sev=g(cfg.fSeverity);
+  var d=stripHtml(F['System.Description'])+' '+stripHtml(F['Microsoft.VSTS.Common.AcceptanceCriteria'])+' '+stripHtml(F['Microsoft.VSTS.TCM.ReproSteps']);
+  return {id:w.id,title:F['System.Title'],type:type,state:state,dev:dev,iter:F['System.IterationPath']||'',
+    pri:num(g(cfg.fPriority)),sev:sev==null?'':String(sev),pts:num(g(cfg.fPoints)),rem:num(g(cfg.fRemaining)),orig:num(g(cfg.fOriginal)),
+    tags:tags,age:sc?bizDays(new Date(sc),new Date()):0,done:cat==='Completed',
+    blocked:tags.some(function(t){return t.toLowerCase()===String(cfg.blockedTag).toLowerCase()}),
+    descOk:d.trim().length>=20,preds:null,
+    comp:num(g(cfg.fCompleted)),root:(function(v){return v==null?'':(typeof v==='object'?(v.displayName||''):String(v))})(g(cfg.fRoot)),
+    url:'https://dev.azure.com/'+enc(cfg.org)+'/'+enc(cfg.project)+'/_workitems/edit/'+w.id};
+}
+async function fetchItems(ids,withDesc,want){
+  var fields=['System.Title','System.WorkItemType','System.State','System.AssignedTo','System.Tags','System.ChangedDate','System.IterationPath'].concat(want);
+  if(withDesc)['System.Description','Microsoft.VSTS.Common.AcceptanceCriteria','Microsoft.VSTS.TCM.ReproSteps'].forEach(function(f){if(fieldMeta[f])fields.push(f)});
+  var out=[];
+  for(var i=0;i<ids.length;i+=200){
+    var b=await api('wit/workitemsbatch?api-version=7.1',{method:'POST',body:{ids:ids.slice(i,i+200),fields:fields,errorPolicy:'Omit'}});
+    b.value.forEach(function(w){if(w)out.push(norm(w))});
+  }
+  return out;
+}
+function areaClause(){return cfg.area?" AND [System.AreaPath] UNDER '"+esq(cfg.area)+"'":''}
+function typeClause(){var t=typeList();return t.length?" AND [System.WorkItemType] IN ("+t.map(function(x){return "'"+esq(x)+"'"}).join(',')+")":''}
+
+/* ---------- stand-up load ---------- */
+async function load(){
+  if(loading)return;
+  loading=true;isDemo=false;
+  $('#warn').innerHTML='';
+  setStatus('Connecting to Azure DevOps…');
+  try{
+    await ensureCore();
+    if(!selectedIter)throw new Error('No iterations with start and end dates were found in this project.');
+    $('#iter').value=selectedIter;
+    sprintInfo=iterations.filter(function(i){return i.path===selectedIter})[0]||null;
+    var wf=wantedFields();
+    if(wf.warns.length)$('#warn').innerHTML=wf.warns.map(function(w){return '<div class="banner">'+esc(w)+'</div>'}).join('');
+    var q="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.IterationPath] = '"+esq(selectedIter)+"'"+areaClause()+typeClause()+" AND [System.State] <> 'Removed' ORDER BY [System.Id]";
+    setStatus('Reading the sprint…');
+    var wr=await api('wit/wiql?api-version=7.1',{method:'POST',body:{query:q}});
+    var ids=(wr.workItems||[]).map(function(w){return w.id});
+    items=await fetchItems(ids,false,wf.want);
+    applySnapshot();
+    setStatus('Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' · '+items.length+' items in this sprint');
+    render();
+  }catch(e){
+    $('#warn').innerHTML='<div class="banner err">'+esc(e.message)+'</div>';
+    setStatus('');
+    if(!items.length)renderEmpty();
+  }finally{loading=false}
+}
+
+/* ---------- snapshots (kept in this browser only) ---------- */
+function applySnapshot(){
+  prevInfo=null;
+  var all=sget(SNAPKEY)||{},k=cfg.org+'|'+cfg.project+'|'+selectedIter,dates=all[k]||{},today=isoDay(new Date());
+  var prevDate=Object.keys(dates).filter(function(d){return d<today}).sort().pop();
+  if(prevDate){
+    var prev=dates[prevDate],fin=[],mov=[],add=[],gone=[],cur={};
+    items.forEach(function(it){
+      cur[it.id]=1;var p=prev[it.id];
+      if(!p)add.push(it);
+      else if(it.done&&!p.d)fin.push({it:it,from:p.s});
+      else if(it.state!==p.s)mov.push({it:it,from:p.s});
+    });
+    Object.keys(prev).forEach(function(id){if(!cur[id])gone.push({id:id,title:prev[id].t})});
+    prevInfo={date:prevDate,fin:fin,mov:mov,add:add,gone:gone};
+  }
+  var snap={};items.forEach(function(it){snap[it.id]={s:it.state,d:it.done,t:it.title}});
+  dates[today]=snap;
+  Object.keys(dates).sort().slice(0,-10).forEach(function(d){delete dates[d]});
+  all[k]=dates;
+  var keys=Object.keys(all);if(keys.length>12)keys.slice(0,keys.length-12).forEach(function(x){delete all[x]});
+  sset(SNAPKEY,all);
+}
+
+/* ---------- stand-up render ---------- */
+function setStatus(t){$('#status').textContent=t}
+function renderEmpty(){
+  $('#summary').innerHTML='';$('#filters').hidden=true;$('#since').innerHTML='';
+  $('#board').innerHTML='<div class="empty"><p><b>Nothing loaded yet.</b></p><p>Open Settings, add your token, and press Save and load. Or press Demo data to see the layout with sample items.</p></div>';
+}
+function tile(n,label,cls,extra){return '<div class="tile '+(cls||'')+'"><b>'+n+'</b><span>'+label+'</span>'+(extra||'')+'</div>'}
+function render(){
+  if(!items.length){
+    $('#summary').innerHTML='';$('#filters').hidden=true;$('#since').innerHTML='';
+    $('#board').innerHTML='<div class="empty">No Bugs or Tasks found in this sprint for the chosen area path.</div>';return;
+  }
+  var open=items.filter(function(i){return!i.done}),done=items.filter(function(i){return i.done});
+  var pts=function(a){return a.reduce(function(s,i){return s+(i.pts||0)},0)};
+  var stale=open.filter(function(i){return i.age>=cfg.redDays}).length;
+  var blocked=open.filter(function(i){return i.blocked}).length;
+  var nopts=open.filter(function(i){return i.pts==null}).length;
+  var unas=open.filter(function(i){return!i.dev}).length;
+  var tp=pts(items),dp=pts(done),pct=tp?Math.round(dp/tp*100):0;
+  var dayTxt='';
+  if(sprintInfo&&!isDemo){
+    var total=bizSpan(sprintInfo.start,sprintInfo.finish),now=new Date();
+    var el=now<sprintInfo.start?0:Math.min(total,bizSpan(sprintInfo.start,now));
+    dayTxt=tile('Day '+el+' of '+total,'working days into the sprint','');
+  }
+  $('#summary').innerHTML=dayTxt+tile(open.length,'open items')+tile(done.length,'done')+
+    tile(dp+' / '+tp,'points done / committed','','<div class="bar"><i style="width:'+pct+'%"></i></div>')+
+    tile(blocked,'blocked',blocked?'red':'')+tile(stale,'stale ('+cfg.redDays+'+ working days)',stale?'red':'')+
+    tile(nopts,'open items without points',nopts?'amber':'')+tile(unas,'open items unassigned',unas?'red':'');
+
+  var devs=Object.keys(items.reduce(function(m,i){m[i.dev||'']=1;return m},{})).sort(function(a,b){if(!a)return-1;if(!b)return 1;return a.localeCompare(b)});
+  var sel=$('#fDev'),cv=filt.dev;
+  sel.innerHTML='<option value="">Everyone</option>'+devs.map(function(d){return '<option value="'+esc(d)+'">'+esc(d||'Unassigned')+'</option>'}).join('');
+  sel.value=cv;$('#filters').hidden=false;
+
+  renderSince();
+
+  var html='';
+  devs.forEach(function(d){
+    var list=items.filter(function(i){return(i.dev||'')===d&&vis(i)});
+    if(!list.length)return;
+    list.sort(function(a,b){
+      if(a.done!==b.done)return a.done?1:-1;
+      var pa=a.pri==null?99:a.pri,pb=b.pri==null?99:b.pri;
+      return pa-pb||b.age-a.age||a.id-b.id;
+    });
+    var all=items.filter(function(i){return(i.dev||'')===d}),o=all.filter(function(i){return!i.done});
+    var rem=o.reduce(function(s,i){return s+(i.rem||0)},0);
+    html+='<div class="col'+(d?'':' unassigned')+'"><h2>'+esc(d||'Unassigned')+'<small>'+o.length+' open · '+pts(o)+' pts · '+(rem?rem+'h remaining · ':'')+(all.length-o.length)+' done</small></h2><div class="cards">'+list.map(card).join('')+'</div></div>';
+  });
+  $('#board').innerHTML=html?'<div class="cols">'+html+'</div>':'<div class="empty">Nothing matches these filters.</div>';
+}
+function vis(i){
+  if(!filt.done&&i.done)return false;
+  if(filt.blocked&&!i.blocked)return false;
+  if(filt.stale&&!(!i.done&&i.age>=cfg.amberDays))return false;
+  if(filt.dev&&(i.dev||'')!==filt.dev)return false;
+  return true;
+}
+function card(i){
+  var lvl=i.done?'':(i.age>=cfg.redDays?'red':(i.age>=cfg.amberDays?'amber':''));
+  var h='<div class="card '+lvl+(i.done?' done':'')+'"><div class="r1"><a href="'+esc(i.url)+'" target="_blank" rel="noopener">#'+i.id+'</a>';
+  h+='<span class="chip '+(i.type==='Bug'?'bug':'task')+'">'+esc(i.type)+'</span>';
+  if(i.pri!=null)h+='<span class="chip '+(i.pri===1?'p1':(i.pri===2?'p2':''))+'">P'+i.pri+'</span>';
+  if(i.sev)h+='<span class="chip" title="Severity">Sev '+esc(i.sev)+'</span>';
+  h+=i.pts!=null?'<span class="chip pts">'+i.pts+(i.pts===1?' pt':' pts')+'</span>':'<span class="chip nopts">no points</span>';
+  h+='</div><div class="title">'+esc(i.title)+'</div><div class="r3"><span class="chip">'+esc(i.state)+'</span>';
+  if(!i.done)h+='<span class="age '+lvl+'" title="Working days since the last state change">'+i.age+'d in state'+(lvl==='red'?' · STALE':'')+'</span>';
+  if(i.rem)h+='<span class="mute">'+i.rem+'h left</span>';
+  if(i.blocked&&!i.done)h+='<span class="chip blk">BLOCKED</span>';
+  h+='</div>';
+  var other=i.tags.filter(function(t){return t.toLowerCase()!==String(cfg.blockedTag).toLowerCase()});
+  if(other.length)h+='<div class="tags">'+other.map(function(t){return '<span class="chip">'+esc(t)+'</span>'}).join('')+'</div>';
+  return h+'</div>';
+}
+function li(it,from){return '<li><a href="'+esc(it.url)+'" target="_blank" rel="noopener">#'+it.id+'</a> '+esc(it.title)+' <span class="mute">('+esc(it.dev||'Unassigned')+(from?' · '+esc(from)+' → '+esc(it.state):'')+')</span></li>'}
+function renderSince(){
+  if(!prevInfo){$('#since').innerHTML='';return}
+  var p=prevInfo,n=p.fin.length+p.mov.length+p.add.length+p.gone.length;
+  var h='<details class="since" '+(n?'open':'')+'><summary>Changes since '+esc(p.date)+' ('+n+')</summary><div class="inner">';
+  h+='<div><h4>Finished ('+p.fin.length+')</h4><ul>'+(p.fin.map(function(x){return li(x.it,x.from)}).join('')||'<li class="mute">None</li>')+'</ul></div>';
+  h+='<div><h4>Changed state ('+p.mov.length+')</h4><ul>'+(p.mov.map(function(x){return li(x.it,x.from)}).join('')||'<li class="mute">None</li>')+'</ul></div>';
+  h+='<div><h4>New in sprint ('+p.add.length+')</h4><ul>'+(p.add.map(function(x){return li(x.it)}).join('')||'<li class="mute">None</li>')+'</ul></div>';
+  h+='<div><h4>Left the sprint ('+p.gone.length+')</h4><ul>'+(p.gone.map(function(x){return '<li>#'+esc(x.id)+' '+esc(x.title)+'</li>'}).join('')||'<li class="mute">None</li>')+'</ul></div>';
+  $('#since').innerHTML=h+'</div></details>';
+}
+
+/* ---------- planning: load ---------- */
+function samePath(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase()}
+function isDoneState(it){return it.done||/^(done|closed|completed|removed)$/i.test(it.state||'')}
+async function loadDeps(ids,paths){
+  try{
+    var cond=paths.map(function(p){return "[Source].[System.IterationPath] = '"+esq(p)+"'"}).join(' OR ');
+    var q="SELECT [System.Id] FROM WorkItemLinks WHERE ([Source].[System.TeamProject] = @project AND ("+cond+") AND [Source].[System.State] <> 'Removed') AND ([System.Links.LinkType] = 'System.LinkTypes.Dependency-Reverse') MODE (MustContain)";
+    var r=await api('wit/wiql?api-version=7.1',{method:'POST',body:{query:q}});
+    var preds={},idset={};ids.forEach(function(i){idset[i]=1});
+    (r.workItemRelations||[]).forEach(function(rel){
+      if(!rel.rel||!rel.source||!rel.target)return;
+      if(!idset[rel.source.id])return;
+      (preds[rel.source.id]=preds[rel.source.id]||[]).push(rel.target.id);
+    });
+    var need={};
+    Object.keys(preds).forEach(function(k){preds[k].forEach(function(p){if(!idset[p])need[p]=1})});
+    var info={};
+    var needIds=Object.keys(need).map(Number);
+    for(var i=0;i<needIds.length;i+=200){
+      var b=await api('wit/workitemsbatch?api-version=7.1',{method:'POST',body:{ids:needIds.slice(i,i+200),fields:['System.Title','System.State','System.WorkItemType'],errorPolicy:'Omit'}});
+      b.value.forEach(function(w){if(w)info[w.id]={id:w.id,title:w.fields['System.Title'],state:w.fields['System.State'],done:/^(done|closed|completed|removed)$/i.test(w.fields['System.State']||'')||stateCats[w.fields['System.WorkItemType']+'|'+w.fields['System.State']]==='Completed'}});
+    }
+    pool.forEach(function(it){
+      it.preds=(preds[it.id]||[]).map(function(pid){
+        var p=info[pid];
+        if(p)return p;
+        var inPool=pool.filter(function(x){return x.id===pid})[0];
+        return inPool?{id:pid,title:inPool.title,state:inPool.state,done:isDoneState(inPool)}:{id:pid,title:'',state:'',done:false};
+      });
+    });
+    return true;
+  }catch(e){return false}
+}
+async function loadPlan(){
+  if(planLoading)return;
+  planLoading=true;isDemo=false;
+  $('#planWarn').innerHTML='';
+  setPlanStatus('Connecting to Azure DevOps…');
+  try{
+    await ensureCore();
+    if(!planTarget)throw new Error('No iterations with start and end dates were found in this project.');
+    $('#planIter').value=planTarget;
+    planInfo=iterations.filter(function(i){return i.path===planTarget})[0]||null;
+    var cur=pickCurrent(),paths=[planTarget];
+    if(cfg.backlogIter)paths.push(cfg.backlogIter);
+    if(cur&&!samePath(cur.path,planTarget))paths.push(cur.path);
+    var wf=wantedFields(),warns=wf.warns.slice();
+    var cond=paths.map(function(p){return "[System.IterationPath] = '"+esq(p)+"'"}).join(' OR ');
+    var q="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND ("+cond+")"+areaClause()+typeClause()+" AND [System.State] <> 'Removed' ORDER BY [System.Id]";
+    setPlanStatus('Reading the backlog and sprint…');
+    var wr=await api('wit/wiql?api-version=7.1',{method:'POST',body:{query:q}});
+    var ids=(wr.workItems||[]).map(function(w){return w.id});
+    var list=await fetchItems(ids,true,wf.want);
+    pool=list.filter(function(it){return!isDoneState(it)}).map(function(it){
+      it.source=samePath(it.iter,planTarget)?'target':(samePath(it.iter,cfg.backlogIter)?'backlog':'current');
+      return it;
+    });
+    setPlanStatus('Reading dependency links…');
+    depsKnown=await loadDeps(pool.map(function(i){return i.id}),paths);
+    if(!depsKnown)warns.push('Dependency links could not be read, so the "waiting on" check is skipped.');
+    if(!pool.some(function(i){return i.source==='backlog'}))warns.push('Nothing was found in the backlog iteration "'+cfg.backlogIter+'". Check the path in Settings.');
+    if(warns.length)$('#planWarn').innerHTML=warns.map(function(w){return '<div class="banner">'+esc(w)+'</div>'}).join('');
+    loadDraft();
+    setPlanStatus('Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' · '+pool.length+' open items found');
+    renderPlan();
+  }catch(e){
+    $('#planWarn').innerHTML='<div class="banner err">'+esc(e.message)+'</div>';
+    setPlanStatus('');
+    if(!pool.length)renderPlanEmpty();
+  }finally{planLoading=false}
+}
+function setPlanStatus(t){$('#planStatus').textContent=t}
+
+/* ---------- planning: draft ---------- */
+function draftKey(){return cfg.org+'|'+cfg.project+'|'+planTarget}
+function loadDraft(){
+  var all=sget(DRAFTKEY)||{},d=all[draftKey()]||{added:[],removed:[]},byId={};
+  pool.forEach(function(i){byId[i.id]=i});
+  draft={added:{},removed:{}};
+  (d.added||[]).forEach(function(id){if(byId[id]&&byId[id].source!=='target')draft.added[id]=1});
+  (d.removed||[]).forEach(function(id){if(byId[id]&&byId[id].source==='target')draft.removed[id]=1});
+}
+function saveDraft(){
+  if(isDemo)return;
+  var all=sget(DRAFTKEY)||{};
+  all[draftKey()]={added:Object.keys(draft.added).map(Number),removed:Object.keys(draft.removed).map(Number)};
+  var keys=Object.keys(all);if(keys.length>10)keys.slice(0,keys.length-10).forEach(function(k){delete all[k]});
+  sset(DRAFTKEY,all);
+}
+function inDraft(it){return it.source==='target'?!draft.removed[it.id]:!!draft.added[it.id]}
+
+/* ---------- planning: calculations ---------- */
+function unitIsH(){return cfg.unit!=='p'}
+function effort(it){return unitIsH()?(it.rem!=null&&it.rem>0?it.rem:(it.orig!=null?it.orig:0)):(it.pts!=null?it.pts:0)}
+function hasEstimate(it){return effort(it)>0}
+function openPreds(it){return (it.preds||[]).filter(function(p){return!p.done})}
+function readiness(it){
+  var miss=[];
+  if(!hasEstimate(it))miss.push(unitIsH()?'Not estimated':'Not sized');
+  if(!it.descOk)miss.push('No description');
+  var op=openPreds(it);
+  if(op.length)miss.push('Waiting on '+op.map(function(p){return '#'+p.id}).join(', '));
+  return miss;
+}
+function capOf(dev){
+  var c=cfg.caps[dev]||{},k=unitIsH()?'h':'p';
+  return c[k]!=null&&c[k]!==''?Number(c[k]):(unitIsH()?Number(cfg.capH)||0:Number(cfg.capP)||0);
+}
+function uLabel(n){return unitIsH()?(Math.round(n*10)/10)+'h':(Math.round(n*10)/10)+(n===1?' pt':' pts')}
+function rankCmp(a,b){
+  var pa=a.pri==null?99:a.pri,pb=b.pri==null?99:b.pri;
+  if(pa!==pb)return pa-pb;
+  var sa=parseInt(a.sev,10)||99,sb=parseInt(b.sev,10)||99;
+  if(sa!==sb)return sa-sb;
+  return b.age-a.age||a.id-b.id;
+}
+
+/* ---------- planning: render ---------- */
+function renderPlanEmpty(){
+  $('#planTiles').innerHTML='';$('#capBars').innerHTML='';$('#draftList').innerHTML='';$('#movesBody').innerHTML='';
+  $('#backlogList').innerHTML='<div class="empty"><p><b>Nothing loaded yet.</b></p><p>Open Settings, add your token and press Save and load. Or press Demo data to see this screen with sample items.</p></div>';
+  $('#blCount').textContent='';$('#propCount').textContent='';
+}
+function planName(){return planInfo?planInfo.name:'the planning sprint'}
+function renderPlan(){
+  $('#unit').value=cfg.unit;$('#onlyReady').checked=!!cfg.onlyReady;
+  if(!pool.length){renderPlanEmpty();return}
+  var inD=pool.filter(inDraft);
+  var devSet={};pool.forEach(function(i){if(i.dev)devSet[i.dev]=1});
+  var devs=Object.keys(devSet).sort();
+  var committed={};inD.forEach(function(i){var d=i.dev||'';committed[d]=(committed[d]||0)+effort(i)});
+  var teamCap=0,teamCom=0;
+  devs.forEach(function(d){teamCap+=capOf(d)});
+  inD.forEach(function(i){teamCom+=effort(i)});
+  var line=teamCap*cfg.commitPct/100,notReady=inD.filter(function(i){return readiness(i).length}).length;
+  var noEst=inD.filter(function(i){return!hasEstimate(i)}).length;
+  var stale=inD.filter(function(i){return i.source!=='target'&&i.age>=cfg.staleDays}).length;
+  var overCls=line>0&&teamCom>teamCap?'red':(line>0&&teamCom>line?'amber':'green');
+  $('#planTiles').innerHTML=
+    tile(inD.length,'items in the proposed sprint')+
+    tile(uLabel(teamCom),'effort committed',overCls)+
+    tile(line>0?uLabel(line):'not set','commit line ('+cfg.commitPct+'% of '+(line>0?uLabel(teamCap):'capacity')+')')+
+    tile(line>0?uLabel(Math.max(0,line-teamCom)):'-','room left before the commit line')+
+    tile(notReady,'items not ready',notReady?'amber':'')+
+    tile(noEst,unitIsH()?'items without an estimate':'items without points',noEst?'amber':'')+
+    tile(stale,'stale backlog items pulled in (over '+cfg.staleDays+' working days)',stale?'green':'');
+  // capacity bars
+  var cdev=devs.slice();if(committed['']&&cdev.indexOf('')<0)cdev.push('');
+  var ch='';
+  cdev.forEach(function(d){
+    var cap=d?capOf(d):0,com=committed[d]||0,lim=cap*cfg.commitPct/100;
+    var cls=cap<=0?'ok':(com>cap?'over':(com>lim?'warn':'ok')),w=cap>0?Math.min(100,com/cap*100):0;
+    ch+='<div class="caprow"><div class="capname" title="'+esc(d||'Unassigned')+'">'+esc(d||'Unassigned')+'</div>'+
+      '<div class="capbar">'+(cap>0?'<i class="'+cls+'" style="width:'+w+'%"></i><u style="left:'+cfg.commitPct+'%" title="Commit line"></u>':'')+'</div>'+
+      '<div class="capnum">'+(d?(esc(uLabel(com))+' of <input type="number" class="capin" min="0" step="1" data-dev="'+esc(d)+'" value="'+cap+'" aria-label="Capacity for '+esc(d)+'">'):esc(uLabel(com))+' (no capacity)')+'</div></div>';
+  });
+  $('#capBars').innerHTML=ch||'<span class="mute">No developers found yet.</span>';
+  // proposed sprint list
+  var byDev={};inD.forEach(function(i){(byDev[i.dev||'']=byDev[i.dev||'']||[]).push(i)});
+  var dh='';
+  Object.keys(byDev).sort(function(a,b){if(!a)return-1;if(!b)return 1;return a.localeCompare(b)}).forEach(function(d){
+    var arr=byDev[d].sort(rankCmp);
+    dh+='<div><div class="devhead"><span>'+esc(d||'Unassigned')+'</span><span class="mute">'+arr.length+' item'+(arr.length===1?'':'s')+' · '+esc(uLabel(committed[d]||0))+'</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">'+arr.map(function(i){return planCard(i,'remove')}).join('')+'</div></div>';
+  });
+  $('#draftList').innerHTML=dh||'<div class="empty">Nothing in the proposed sprint yet. Add items from the backlog.</div>';
+  $('#propCount').textContent=inD.length+' items for '+planName();
+  renderBacklog();
+  renderMoves();
+}
+function planCard(i,mode){
+  var miss=readiness(i),lvl=(i.source!=='target'&&i.age>=cfg.staleDays)?'red':'';
+  var h='<div class="card '+lvl+'"><div class="row"><div class="grow"><div class="r1"><a href="'+esc(i.url)+'" target="_blank" rel="noopener">#'+i.id+'</a>';
+  h+='<span class="chip '+(i.type==='Bug'?'bug':'task')+'">'+esc(i.type)+'</span>';
+  if(i.pri!=null)h+='<span class="chip '+(i.pri===1?'p1':(i.pri===2?'p2':''))+'">P'+i.pri+'</span>';
+  if(i.sev)h+='<span class="chip" title="Severity">Sev '+esc(i.sev)+'</span>';
+  var e=effort(i);
+  h+=e>0?'<span class="chip pts">'+esc(uLabel(e))+'</span>':'<span class="chip nopts">'+(unitIsH()?'no estimate':'no points')+'</span>';
+  h+='</div><div class="title">'+esc(i.title)+'</div><div class="r3">';
+  h+='<span class="chip">'+(i.source==='target'?'In '+esc(planName()):(i.source==='current'?'Rolling over':'Backlog'))+'</span>';
+  if(mode==='add')h+='<span class="chip">'+esc(i.dev||'Unassigned')+'</span>';
+  h+='<span class="age '+(i.age>=cfg.staleDays?'red':'')+'" title="Working days since the last state change">'+i.age+'d in state'+(i.age>=cfg.staleDays?' · STALE':'')+'</span>';
+  if(i.blocked)h+='<span class="chip blk">BLOCKED</span>';
+  h+='</div><div class="tags">'+(miss.length?miss.map(function(m){return '<span class="chip '+(/Waiting/.test(m)?'bad':'warn')+'">'+esc(m)+'</span>'}).join(''):'<span class="chip ok">Ready</span>')+'</div></div>';
+  var locked=mode==='add'&&cfg.onlyReady&&miss.length>0;
+  h+='<div>'+(mode==='add'?'<button type="button" class="small primary addb" data-id="'+i.id+'"'+(locked?' disabled title="Not ready: '+esc(miss.join(', '))+'"':'')+'>Add</button>':'<button type="button" class="small remb" data-id="'+i.id+'">Remove</button>')+'</div></div></div>';
+  return h;
+}
+function renderBacklog(){
+  var list=pool.filter(function(i){return!inDraft(i)});
+  if(bl.source!=='all')list=list.filter(function(i){return bl.source==='backlog'?i.source==='backlog':i.source==='current'||i.source==='target'});
+  if(bl.ready)list=list.filter(function(i){return readiness(i).length===0});
+  if(bl.stale)list=list.filter(function(i){return i.age>=cfg.staleDays});
+  if(bl.q){var q=bl.q.toLowerCase();list=list.filter(function(i){return String(i.id).indexOf(q)>=0||String(i.title).toLowerCase().indexOf(q)>=0})}
+  if(bl.sort==='oldest')list.sort(function(a,b){return b.age-a.age||a.id-b.id});
+  else if(bl.sort==='largest')list.sort(function(a,b){return effort(b)-effort(a)||rankCmp(a,b)});
+  else list.sort(rankCmp);
+  var total=pool.filter(function(i){return!inDraft(i)}).length;
+  $('#blCount').textContent=list.length+' of '+total+' shown';
+  var shown=list.slice(0,150);
+  $('#backlogList').innerHTML=(shown.length?shown.map(function(i){return planCard(i,'add')}).join(''):'<div class="empty">Nothing matches these filters.</div>')+(list.length>shown.length?'<div class="mute" style="padding:4px 2px">Showing the first '+shown.length+'. Narrow the filters to see the rest.</div>':'');
+}
+function renderMoves(){
+  var tgt=pool.filter(function(i){return i.source==='target'});
+  var toIn=pool.filter(function(i){return i.source!=='target'&&draft.added[i.id]}).sort(rankCmp);
+  var toOut=tgt.filter(function(i){return draft.removed[i.id]}).sort(rankCmp);
+  var n=toIn.length+toOut.length;
+  $('#movesSum').textContent='Changes to make in Azure DevOps ('+n+')';
+  if(!n){$('#movesBody').innerHTML='<div class="bt mute">The proposed sprint matches what is already in '+esc(planName())+'. Nothing to move.</div>';return}
+  var line=function(i){return '#'+i.id+'  '+i.title+'  ('+(i.dev||'Unassigned')+')'};
+  var text=(toIn.length?'Move into '+planName()+':\n'+toIn.map(line).join('\n')+'\n':'')+(toOut.length?(toIn.length?'\n':'')+'Move out of '+planName()+' (back to the backlog):\n'+toOut.map(line).join('\n'):'');
+  $('#movesBody').innerHTML='<div class="bt"><button type="button" class="small" id="copyMoves">Copy this list</button> <span class="mute" id="copyMsg">This page is read-only: make the moves in Azure DevOps.</span></div><pre id="movesText">'+esc(text)+'</pre>';
+  $('#copyMoves').onclick=function(){
+    var done=function(ok){$('#copyMsg').textContent=ok?'Copied.':'Could not copy: select the text and copy it.'};
+    try{navigator.clipboard.writeText(text).then(function(){done(true)},function(){done(false)})}catch(e){done(false)}
+  };
+}
+
+/* ---------- demo ---------- */
+function demo(){
+  isDemo=true;prevInfo=null;sprintInfo=null;$('#warn').innerHTML='';$('#planWarn').innerHTML='';
+  var D=['Developer 1','Developer 2','Developer 3','Developer 4','Developer 5'];
+  var rows=[
+    ['Bug','Active',0,1,'2 - High',3,4,'Invoice export fails for multi-currency accounts',['Client A'],2,0,0],
+    ['Task','Active',0,2,'',5,12,'Add validation to the supplier import screen',['Client A'],4,0,0],
+    ['Bug','Ready for QA',0,2,'3 - Medium',2,0,'Report footer shows wrong financial year',['Client B'],1,0,0],
+    ['Task','Done',0,3,'',3,0,'Update budget lookup query',[],0,1,0],
+    ['Bug','Active',1,1,'1 - Critical',5,8,'Payment run duplicates entries after retry',['Client C','Legacy'],8,0,1],
+    ['Task','New',1,2,'',null,16,'Investigate month-end close performance',['Client C'],3,0,0],
+    ['Task','Active',1,3,'',8,20,'Rework receipting workflow',[],5,0,0],
+    ['Bug','Active',2,2,'2 - High',2,3,'Statement PDF truncates long descriptions',['Client B'],1,0,0],
+    ['Bug','In QA',2,3,'3 - Medium',1,0,'Date picker ignores locale',[],2,0,0],
+    ['Task','Done',2,2,'',2,0,'Migrate stored procedure to new schema',['Legacy'],0,1,0],
+    ['Bug','Active',3,1,'2 - High',3,6,'Asset register total does not match GL',['Client D','Legacy'],4,0,0],
+    ['Task','Active',3,2,'',null,10,'Document legacy posting rules',['Legacy'],6,0,0],
+    ['Task','New',4,3,'',3,8,'Add audit trail to tariff changes',['Client A'],1,0,0],
+    ['Bug','Active',4,2,'3 - Medium',2,5,'Search returns inactive suppliers',[],3,0,1],
+    ['Bug','New',-1,2,'2 - High',null,0,'Login redirect loop on mobile browsers',['Client B'],2,0,0]
+  ];
+  items=rows.map(function(r,n){
+    return {id:1000+n,type:r[0],state:r[1],dev:r[2]<0?'':D[r[2]],pri:r[3],sev:r[4],pts:r[5],rem:r[6],title:r[7],tags:r[8].concat(r[11]?['Blocked']:[]),age:r[9],done:!!r[10],blocked:!!r[11],url:'#'};
+  });
+  $('#iter').innerHTML='<option>Demo sprint (sample data)</option>';
+  setStatus('Demo data · not connected to Azure DevOps');
+  render();
+  // planning demo
+  planInfo={name:'Demo next sprint',path:'Demo\\Next',start:new Date(),finish:new Date()};planTarget='Demo\\Next';
+  $('#planIter').innerHTML='<option>Demo next sprint (sample data)</option>';
+  var P=[
+    // type,dev,pri,sev,pts,hrs,title,age,desc,source,predIdx
+    ['Bug',0,1,'2 - High',3,4,'Export button does nothing on Safari',2,1,'target'],
+    ['Task',1,2,'',5,12,'Add supplier bank detail validation',3,1,'target'],
+    ['Task',2,2,'',3,8,'Member statement: add opening balance',1,1,'target'],
+    ['Bug',3,2,'3 - Medium',2,5,'Wrong rounding on pro-rata charge',4,1,'target'],
+    ['Bug',0,1,'1 - Critical',5,10,'Pension run fails when a member has two nominees',2,1,'backlog'],
+    ['Bug',1,2,'2 - High',2,3,'Orders list shows cancelled orders',6,1,'backlog'],
+    ['Task',2,3,'',8,20,'Refactor tariff import for the new schema',31,1,'backlog'],
+    ['Bug',3,3,'3 - Medium',null,0,'Tooltip text cut off on budget screen',27,0,'backlog'],
+    ['Task',4,2,'',3,6,'Add search by TMT number to the change list',9,1,'backlog'],
+    ['Bug',4,2,'2 - High',2,4,'Statement email has wrong sender name',25,1,'backlog'],
+    ['Task',0,3,'',5,14,'Document the legacy posting rules',33,0,'backlog'],
+    ['Bug',2,2,'2 - High',3,6,'Creditor age analysis misses credit notes',12,1,'backlog',1],
+    ['Task',1,3,'',2,4,'Update help text on the leave screen',40,1,'backlog'],
+    ['Bug',-1,2,'3 - Medium',null,0,'Unassigned: report layout breaks when printing',18,1,'backlog'],
+    ['Task',3,1,'',5,12,'Finish the fund fact sheet changes',3,1,'current'],
+    ['Bug',4,2,'2 - High',2,3,'Rolling over: bank import skips last line',5,1,'current'],
+    ['Task',2,3,'',3,7,'Rolling over: archive folder creation',8,1,'current'],
+    ['Bug',0,3,'3 - Medium',1,2,'Typo on the payments confirmation screen',22,1,'backlog']
+  ];
+  pool=P.map(function(r,n){
+    var id=2000+n;
+    return {id:id,type:r[0],state:'New',dev:r[1]<0?'':D[r[1]],iter:'',pri:r[2],sev:r[3],pts:r[4],rem:r[5],orig:r[5],tags:[],age:r[7],done:false,blocked:false,descOk:!!r[8],source:r[9],title:r[6],url:'#',
+      preds:r[10]!=null?[{id:2005,title:'Orders list shows cancelled orders',state:'New',done:false}]:[]};
+  });
+  depsKnown=true;
+  draft={added:{},removed:{}};
+  setPlanStatus('Demo data · not connected to Azure DevOps');
+  renderPlan();
+  demoReport();
+}
+
+/* ---------- reporting ---------- */
+var rep=null,repLoading=false;
+function setRepStatus(t){$('#repStatus').textContent=t}
+function lc(s){return String(s||'').toLowerCase()}
+function listLc(s){return String(s||'').split(',').map(function(x){return lc(x.trim())}).filter(Boolean)}
+function bizF(a,b){
+  if(!(b>a))return 0;
+  var ms=0,d=new Date(a.getTime());
+  while(d<b){
+    var nx=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1),end=nx<b?nx:b,w=d.getDay();
+    if(w!==0&&w!==6)ms+=end-d;
+    d=end;
+  }
+  return ms/86400000;
+}
+function median(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y}),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function avg(a){return a.length?a.reduce(function(s,x){return s+x},0)/a.length:null}
+function r1(n){return n==null?'-':String(Math.round(n*10)/10)}
+function weekStart(d){var x=atMidnight(d),wd=(x.getDay()+6)%7;x.setDate(x.getDate()-wd);return x}
+function repSprints(){
+  var now=new Date(),started=iterations.filter(function(i){return i.start<=now});
+  return started.slice(0,Math.max(2,cfg.reportSprints||8)).reverse();
+}
+function inScope(f){
+  var t=lc(f['System.WorkItemType']);
+  if(typeList().length&&typeList().map(lc).indexOf(t)<0)return false;
+  var a=f['System.AreaPath'];
+  if(cfg.area&&a){var A=lc(a),B=lc(cfg.area);if(!(A===B||A.indexOf(B+'\\')===0))return false}
+  return true;
+}
+function buildReport(sp,items0,tl,histOk,stale,flags){
+  var byPath={};sp.forEach(function(s,i){byPath[lc(s.path)]=i});
+  var now=new Date(),winStart=sp[0].start;
+  var res=sp.map(function(s){return {name:s.name,path:s.path,start:s.start,finish:s.finish,planned:0,added:0,movedOut:0,done:0,ptsDone:0,bugs:0,tasks:0,bugH:0,taskH:0}});
+  var titleOf={};
+  items0.forEach(function(it){
+    titleOf[it.id]={title:it.title,url:it.url,dev:it.dev};
+    var idx=byPath[lc(it.iter)];
+    if(idx!=null&&it.done){var r=res[idx];r.done++;r.ptsDone+=it.pts||0;if(it.type==='Bug'){r.bugs++;r.bugH+=it.comp||0}else{r.tasks++;r.taskH+=it.comp||0}}
+  });
+  if(histOk){
+    items0.forEach(function(it){
+      var arr=tl[it.id]||[],seen={},prev=null;
+      arr.forEach(function(r){
+        var idx=byPath[lc(r.iter)],pidx=prev==null?null:byPath[lc(prev)];
+        if(idx!=null&&idx!==pidx){seen[idx]=(prev===null&&r.rev>1)?{t:null}:{t:r.t}}
+        prev=r.iter;
+      });
+      var ci=byPath[lc(it.iter)];
+      if(ci!=null&&!seen[ci])seen[ci]={t:null};
+      Object.keys(seen).forEach(function(k){
+        var i=Number(k),lock=new Date(sp[i].start.getTime()+86400000),e=seen[k].t;
+        if(e===null||e<=lock)res[i].planned++;else res[i].added++;
+        if(lc(it.iter)!==lc(sp[i].path))res[i].movedOut++;
+      });
+    });
+  }
+  var wait=listLc(cfg.qaWait),test=listLc(cfg.qaTest),qaAll=wait.concat(test);
+  var qa={waitI:[],testI:[],openWait:[],openTest:[],waitSeen:false},reached={},bounced={},causes={};
+  if(histOk){
+    Object.keys(tl).forEach(function(id){
+      var arr=tl[id],segs=[],last=null,root='';
+      arr.forEach(function(r){
+        if(r.root)root=r.root;
+        if(last===null||lc(r.state)!==lc(last.state)){if(last)last.end=r.t;last={state:r.state,type:r.type,start:r.t,end:null};segs.push(last)}
+      });
+      segs.forEach(function(sg,i){
+        var sl=lc(sg.state),isW=wait.indexOf(sl)>=0,isT=test.indexOf(sl)>=0;
+        if(isW)qa.waitSeen=true;
+        if(!(isW||isT))return;
+        var end=sg.end||now,open=!sg.end;
+        if(end>=winStart){
+          reached[id]=1;
+          var d=bizF(sg.start,end);
+          if(open)(isW?qa.openWait:qa.openTest).push({id:Number(id),days:d});
+          else(isW?qa.waitI:qa.testI).push({d:d,end:end});
+          var nx=segs[i+1];
+          if(nx&&qaAll.indexOf(lc(nx.state))<0&&stateCats[nx.type+'|'+nx.state]!=='Completed'&&lc(nx.state)!=='removed'&&nx.start>=winStart){
+            bounced[id]=1;var c=root||'Not set';causes[c]=(causes[c]||0)+1;
+          }
+        }
+      });
+    });
+  }
+  var wk={};
+  function addW(list,k){list.forEach(function(x){var w=weekStart(x.end).getTime();wk[w]=wk[w]||{wait:[],test:[]};wk[w][k].push(x.d)})}
+  addW(qa.waitI,'wait');addW(qa.testI,'test');
+  qa.weeks=Object.keys(wk).map(Number).sort(function(a,b){return a-b}).slice(-8).map(function(t){return {t:new Date(t),wait:avg(wk[t].wait),test:avg(wk[t].test)}});
+  qa.waitAvg=avg(qa.waitI.map(function(x){return x.d}));qa.waitMed=median(qa.waitI.map(function(x){return x.d}));
+  qa.testAvg=avg(qa.testI.map(function(x){return x.d}));qa.testMed=median(qa.testI.map(function(x){return x.d}));
+  qa.openWait.sort(function(a,b){return b.days-a.days});qa.openTest.sort(function(a,b){return b.days-a.days});
+  var nR=Object.keys(reached).length,nB=Object.keys(bounced).length;
+  var ended=res.filter(function(s){return s.finish<now}).slice(-4);
+  return {sprints:res,histOk:histOk,qa:qa,bounce:{reached:nR,bounced:nB,rate:nR?nB/nR:null,causes:causes},
+    velocity:{n:ended.length,items:avg(ended.map(function(s){return s.done})),pts:avg(ended.map(function(s){return s.ptsDone}))},
+    stale:stale,titleOf:titleOf,noRoot:!!flags.noRoot,hasComp:!!flags.hasComp};
+}
+async function loadReport(){
+  if(repLoading)return;
+  repLoading=true;isDemo=false;
+  $('#repWarn').innerHTML='';setRepStatus('Connecting to Azure DevOps…');
+  try{
+    await ensureCore();
+    var sp=repSprints();
+    if(!sp.length)throw new Error('No sprints with start and end dates have started yet.');
+    var wf=wantedFields(),warns=wf.warns.slice(),extra=[],hasComp=false;
+    if(cfg.fCompleted&&fieldMeta[cfg.fCompleted]){extra.push(cfg.fCompleted);hasComp=true}
+    var rootOk=!!(cfg.fRoot&&fieldMeta[cfg.fRoot]);if(rootOk)extra.push(cfg.fRoot);
+    var cond=sp.map(function(s){return "[System.IterationPath] = '"+esq(s.path)+"'"}).join(' OR ');
+    var q="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND ("+cond+")"+areaClause()+typeClause()+" AND [System.State] <> 'Removed' ORDER BY [System.Id]";
+    setRepStatus('Reading sprint items…');
+    var wr=await api('wit/wiql?api-version=7.1',{method:'POST',body:{query:q}});
+    var idSet={};(wr.workItems||[]).forEach(function(w){idSet[w.id]=1});
+    var tl={},histOk=true;
+    try{
+      var startISO=new Date(sp[0].start.getTime()-56*86400000).toISOString();
+      var revF=['System.IterationPath','System.State','System.ChangedDate','System.WorkItemType','System.AreaPath'].concat(rootOk?[cfg.fRoot]:[]);
+      var url='wit/reporting/workitemrevisions?fields='+enc(revF.join(','))+'&includeLatestOnly=false&startDateTime='+enc(startISO)+'&api-version=7.1';
+      var pages=0,token=null,fin=false;
+      while(!fin&&pages<80){
+        var r=await api(url+(token?'&continuationToken='+enc(token):''));
+        (r.values||[]).forEach(function(v){
+          var f=v.fields||{};if(!inScope(f))return;
+          var rv=f[cfg.fRoot];
+          (tl[v.id]=tl[v.id]||[]).push({rev:v.rev,t:new Date(f['System.ChangedDate']),iter:f['System.IterationPath']||'',state:f['System.State']||'',type:f['System.WorkItemType']||'',root:rootOk?(rv==null?'':(typeof rv==='object'?(rv.displayName||''):String(rv))):''});
+        });
+        pages++;setRepStatus('Reading history, page '+pages+'…');
+        if(r.isLastBatch||!r.continuationToken)fin=true;else token=r.continuationToken;
+      }
+      if(!fin)warns.push('History was cut off after '+pages+' pages, so the oldest sprints may be incomplete.');
+    }catch(e){histOk=false;tl={};warns.push('Work item history could not be read ('+e.message+'). Scope growth, QA time and bounce-backs are skipped.')}
+    var pathSet={};sp.forEach(function(s){pathSet[lc(s.path)]=1});
+    var qaAll=listLc(cfg.qaWait).concat(listLc(cfg.qaTest));
+    Object.keys(tl).forEach(function(id){
+      var arr=tl[id].sort(function(a,b){return a.rev-b.rev});tl[id]=arr;
+      if(arr.some(function(x){return pathSet[lc(x.iter)]})||qaAll.indexOf(lc(arr[arr.length-1].state))>=0)idSet[id]=1;
+    });
+    var ids=Object.keys(idSet).map(Number);
+    setRepStatus('Reading '+ids.length+' items…');
+    var list=await fetchItems(ids,false,wf.want.concat(extra));
+    var stale=[],sc=[];
+    if(cfg.backlogIter)sc.push("[System.IterationPath] = '"+esq(cfg.backlogIter)+"'");
+    if(cfg.backlogTag)sc.push("[System.Tags] CONTAINS '"+esq(cfg.backlogTag)+"'");
+    if(sc.length){
+      setRepStatus('Reading the backlog…');
+      var q2="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND ("+sc.join(' OR ')+")"+areaClause()+typeClause()+" AND [System.State] <> 'Removed' ORDER BY [System.Id]";
+      var w2=await api('wit/wiql?api-version=7.1',{method:'POST',body:{query:q2}});
+      var ids2=(w2.workItems||[]).map(function(w){return w.id});
+      var l2=await fetchItems(ids2,false,wf.want);
+      stale=l2.filter(function(i){return!isDoneState(i)&&i.age>=cfg.staleDays}).sort(function(a,b){return b.age-a.age||a.id-b.id});
+    }
+    rep=buildReport(sp,list,tl,histOk,stale,{noRoot:!rootOk,hasComp:hasComp});
+    if(warns.length)$('#repWarn').innerHTML=warns.map(function(w){return '<div class="banner">'+esc(w)+'</div>'}).join('');
+    setRepStatus('Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' · '+sp.length+' sprints, '+ids.length+' items');
+    renderReport();
+  }catch(e){
+    $('#repWarn').innerHTML='<div class="banner err">'+esc(e.message)+'</div>';
+    setRepStatus('');
+    if(!rep)renderReport();
+  }finally{repLoading=false}
+}
+function legend(a){return '<div style="margin:2px 0 8px">'+a.map(function(x){return '<span class="lg"><i class="'+x[0]+'"></i>'+esc(x[1])+'</span>'}).join('')+'</div>'}
+function brow(label,sub,parts,max,val){
+  var h='<div class="brow"><div class="blab" title="'+esc(sub||label)+'">'+esc(label)+'</div><div class="track">';
+  parts.forEach(function(p){if(p.v>0)h+='<span class="'+p.c+'" style="width:'+(max>0?p.v/max*100:0)+'%" title="'+esc(p.t)+'"></span>'});
+  return h+'</div><div class="bval">'+val+'</div></div>';
+}
+function noHist(){return '<p class="mute">This needs work item history, which could not be read.</p>'}
+function renderReport(){
+  if(!rep){
+    $('#repTiles').innerHTML='';$('#repInfo').textContent='';
+    $('#repBody').innerHTML='<div class="empty" style="grid-column:1/-1"><p><b>Nothing loaded yet.</b></p><p>Open Settings, add your token and press Save and load. Or press Demo data to see this screen with sample numbers.</p></div>';
+    return;
+  }
+  var S=rep.sprints,now=new Date(),cur=S.filter(function(s){return s.start<=now&&now<new Date(s.finish.getTime()+86400000)})[0]||S[S.length-1];
+  var qa=rep.qa,b=rep.bounce,H=rep.histOk;
+  var growth=cur&&cur.planned?Math.round(cur.added/cur.planned*100):null;
+  var combined=!qa.waitSeen;
+  $('#repInfo').textContent=S.length+' sprints, '+fmt(S[0].start)+' to '+fmt(S[S.length-1].finish)+(rep.demo?' · sample numbers':'');
+  $('#repTiles').innerHTML=
+    (H?tile(cur.planned,'planned at lock, '+esc(cur.name))+tile((cur.added?'+':'')+cur.added+(growth!=null?' ('+(growth>0?'+':'')+growth+'%)':''),'added after lock',cur.added?(growth>25?'red':'amber'):'green'):tile('-','scope growth (needs history)'))+
+    tile(rep.velocity.n?r1(rep.velocity.items)+' / '+r1(rep.velocity.pts):'-','velocity: items / points per sprint (last '+rep.velocity.n+' ended)')+
+    (H?tile(qa.waitSeen?r1(qa.waitAvg)+'d':'-','average QA wait (working days)',qa.waitAvg>3?'amber':'')+tile(r1(qa.testAvg)+'d',combined?'average time in QA (wait and test combined)':'average QA testing (working days)',qa.testAvg>3?'amber':'')+tile(b.rate==null?'-':Math.round(b.rate*100)+'%','sent back from QA ('+b.bounced+' of '+b.reached+')',b.rate>0.2?'red':(b.rate>0.1?'amber':'')):'')+
+    tile(rep.stale.length,'stale backlog items (over '+cfg.staleDays+' working days)',rep.stale.length?'amber':'green');
+  var h='';
+  // 1 scope growth
+  var mx=Math.max.apply(null,S.map(function(s){return s.planned+s.added}).concat([1]));
+  h+='<div class="rcard"><h2>Scope growth per sprint</h2><p class="sub">Items in the sprint when it started, against items added after the first day (the lock).</p>';
+  if(!H)h+=noHist();else{
+    h+=legend([['s-planned','Planned at lock'],['s-added','Added after lock']]);
+    S.forEach(function(s){var g=s.planned?Math.round(s.added/s.planned*100):0;h+=brow(s.name,s.name+' · '+fmt(s.start)+' to '+fmt(s.finish),[{v:s.planned,c:'s-planned',t:s.planned+' planned'},{v:s.added,c:'s-added',t:s.added+' added'}],mx,s.planned+' + '+s.added+(s.planned?' (+'+g+'%)':''))});
+    h+='<p class="mute">Items that moved out of a sprint later still count here as planned or added when they entered it.</p>';
+  }
+  h+='</div>';
+  // 2 completed
+  var mc=Math.max.apply(null,S.map(function(s){return s.done}).concat([1]));
+  h+='<div class="rcard"><h2>Completed per sprint</h2><p class="sub">Done items sitting in each sprint, with story points where they are set.</p>'+legend([['s-done','Items done']]);
+  S.forEach(function(s){h+=brow(s.name,s.name+' · '+fmt(s.start)+' to '+fmt(s.finish),[{v:s.done,c:'s-done',t:s.done+' done'}],mc,s.done+' items · '+r1(s.ptsDone)+' pts')});
+  h+='<p class="mute">'+(rep.velocity.n?'Velocity, average of the last '+rep.velocity.n+' ended sprints: '+r1(rep.velocity.items)+' items and '+r1(rep.velocity.pts)+' points.':'No sprint has ended yet.')+' Carried-over items count in the sprint they finish in.</p></div>';
+  // 3 bugs vs tasks
+  var tb=S.reduce(function(a,s){return a+s.bugs},0),tt=S.reduce(function(a,s){return a+s.tasks},0);
+  var mb=Math.max.apply(null,S.map(function(s){return s.bugs+s.tasks}).concat([1]));
+  h+='<div class="rcard"><h2>Bugs against tasks completed</h2><p class="sub">'+(tb+tt?'Bugs were '+Math.round(tb/(tb+tt)*100)+'% of everything completed in this period.':'Nothing completed yet.')+'</p>'+legend([['s-bug','Bugs'],['s-task','Other work (tasks)']]);
+  S.forEach(function(s){var t=s.bugs+s.tasks;h+=brow(s.name,s.name,[{v:s.bugs,c:'s-bug',t:s.bugs+' bugs'},{v:s.tasks,c:'s-task',t:s.tasks+' tasks'}],mb,s.bugs+' bugs · '+s.tasks+' tasks'+(t?' ('+Math.round(s.bugs/t*100)+'% bugs)':'')+(rep.hasComp&&(s.bugH+s.taskH)?' · '+r1(s.bugH)+'h / '+r1(s.taskH)+'h':''))});
+  h+='<p class="mute">'+(rep.hasComp?'Hours are completed work booked on the items (bugs / tasks).':'Hours are not shown: the completed work field was not found.')+' A task is not always an improvement, so read this as a guide.</p></div>';
+  // 4 QA flow
+  h+='<div class="rcard"><h2>QA waiting against testing</h2><p class="sub">Working days items spent in each QA state, for visits that ended in this period.</p>';
+  if(!H)h+=noHist();else{
+    if(combined)h+='<div class="banner">No time was found in a waiting state ('+esc(cfg.qaWait)+'). Until you split the QA state, all time in QA shows as testing.</div>';
+    h+='<div class="kv"><div><b>'+(combined?'-':r1(qa.waitAvg)+' / '+r1(qa.waitMed))+'</b><span>waiting: average / median</span></div><div><b>'+r1(qa.testAvg)+' / '+r1(qa.testMed)+'</b><span>'+(combined?'in QA':'testing')+': average / median</span></div><div><b>'+qa.waitI.length+' / '+qa.testI.length+'</b><span>visits measured</span></div></div>';
+    var mw=Math.max.apply(null,qa.weeks.map(function(w){return(w.wait||0)+(w.test||0)}).concat([1]));
+    h+=legend([['s-wait','Waiting'],['s-test',combined?'In QA':'Testing']]);
+    qa.weeks.forEach(function(w){h+=brow('Week of '+fmt(w.t),'Week of '+fmt(w.t),[{v:w.wait||0,c:'s-wait',t:'waiting '+r1(w.wait)+'d'},{v:w.test||0,c:'s-test',t:'testing '+r1(w.test)+'d'}],mw,(combined?'':r1(w.wait)+'d wait · ')+r1(w.test)+'d '+(combined?'in QA':'test'))});
+    var ow=qa.openWait.concat(qa.openTest).sort(function(a,c){return c.days-a.days}).slice(0,5);
+    if(ow.length){h+='<p style="margin:10px 0 4px"><b>In QA now, longest first</b></p><ul style="margin:0;padding-left:18px;font-size:13px">'+ow.map(function(x){var t=rep.titleOf[x.id]||{};return '<li>'+(t.url?'<a href="'+esc(t.url)+'" target="_blank" rel="noopener">#'+x.id+'</a>':'#'+x.id)+' '+esc(t.title||'')+' <span class="mute">('+r1(x.days)+' working days)</span></li>'}).join('')+'</ul>'}
+  }
+  h+='</div>';
+  // 5 bounce-backs
+  h+='<div class="rcard"><h2>Sent back from QA</h2><p class="sub">Items that left QA for a development state instead of moving forward, with the main root cause on the item.</p>';
+  if(!H)h+=noHist();else{
+    var causes=Object.keys(b.causes).map(function(k){return {k:k,n:b.causes[k]}}).sort(function(x,y){return y.n-x.n}),tot=causes.reduce(function(a,c){return a+c.n},0);
+    h+='<div class="kv"><div><b>'+(b.rate==null?'-':Math.round(b.rate*100)+'%')+'</b><span>of items that reached QA were sent back</span></div><div><b>'+b.bounced+'</b><span>items sent back</span></div><div><b>'+tot+'</b><span>send-backs in total</span></div></div>';
+    if(rep.noRoot)h+='<div class="banner">The root cause field ("'+esc(cfg.fRoot)+'") was not found, so every send-back shows as Not set. Create the field, or set its name in Settings.</div>';
+    h+=causes.length?'<div class="tw"><table class="rt"><thead><tr><th>Root cause</th><th class="n">Send-backs</th><th>Share</th></tr></thead><tbody>'+causes.map(function(c){return '<tr><td>'+esc(c.k)+'</td><td class="n">'+c.n+'</td><td style="width:45%"><div class="track"><span class="s-cause" style="width:'+Math.round(c.n/tot*100)+'%"></span></div></td></tr>'}).join('')+'</tbody></table></div>':'<p class="mute">No send-backs found in this period.</p>';
+  }
+  h+='</div>';
+  // 6 stale backlog
+  var sh=rep.stale.slice(0,60);
+  h+='<div class="rcard wide"><h2>Stale backlog, for the monthly grooming session</h2><p class="sub">Open items in the backlog iteration or tagged '+esc(cfg.backlogTag||'Backlog')+' with no state change for over '+cfg.staleDays+' working days, oldest first.</p>';
+  h+=rep.stale.length?'<div style="margin-bottom:8px"><button type="button" class="small" id="copyStale">Copy this list</button> <span class="mute" id="staleMsg">'+rep.stale.length+' items'+(rep.stale.length>sh.length?', first '+sh.length+' shown':'')+'</span></div><div class="tw"><table class="rt"><thead><tr><th>Item</th><th>Title</th><th>Developer</th><th>State</th><th class="n">Working days</th></tr></thead><tbody>'+sh.map(function(i){return '<tr><td><a href="'+esc(i.url)+'" target="_blank" rel="noopener">#'+i.id+'</a></td><td>'+esc(i.title)+'</td><td>'+esc(i.dev||'Unassigned')+'</td><td>'+esc(i.state)+'</td><td class="n">'+i.age+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="mute">Nothing is stale.</p>';
+  h+='</div>';
+  $('#repBody').innerHTML=h;
+  var cb=$('#copyStale');
+  if(cb)cb.onclick=function(){
+    var text=rep.stale.map(function(i){return '#'+i.id+'  '+i.title+'  ('+(i.dev||'Unassigned')+', '+i.state+', '+i.age+' working days)'}).join('\n');
+    var done=function(ok){$('#staleMsg').textContent=ok?'Copied.':'Could not copy: select the text and copy it.'};
+    try{navigator.clipboard.writeText(text).then(function(){done(true)},function(){done(false)})}catch(e){done(false)}
+  };
+}
+function demoReport(){
+  var n=8,now=new Date(),mon=weekStart(now),S=[],i;
+  var pl=[41,38,45,40,44,39,42,53],ad=[6,9,5,12,8,14,10,20],dn=[34,36,40,35,41,37,38,29],pt=[48,52,60,50,58,54,55,38],bg=[19,22,18,25,20,24,21,17],mo=[3,4,2,6,3,5,4,2];
+  for(i=0;i<n;i++){
+    var st=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()-7*(n-1-i)),fn=new Date(st.getFullYear(),st.getMonth(),st.getDate()+4);
+    S.push({name:'Dev '+isoDay(fn),path:'Demo\\S'+i,start:st,finish:fn,planned:pl[i],added:ad[i],movedOut:mo[i],done:dn[i],ptsDone:pt[i],bugs:bg[i],tasks:dn[i]-bg[i],bugH:bg[i]*3.1,taskH:(dn[i]-bg[i])*5.4});
+  }
+  var weeks=[];
+  for(i=0;i<8;i++)weeks.push({t:new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()-7*(7-i)),wait:[2.6,3.1,2.2,3.8,3.0,4.2,3.5,3.9][i],test:[1.4,1.8,1.2,2.0,1.6,2.1,1.7,1.9][i]});
+  var titleOf={},stale=[];
+  var T=['Pension run fails with two nominees','Creditor age analysis misses credit notes','Statement email has wrong sender name','Report footer wrong financial year','Search returns inactive suppliers'];
+  T.forEach(function(t,k){titleOf[3000+k]={title:t,url:'#',dev:'Developer '+(k+1)}});
+  var sT=['Typo on the payments confirmation screen','Update help text on the leave screen','Document the legacy posting rules','Tooltip text cut off on budget screen','Refactor tariff import for the new schema','Add CSV export to the asset register','Unassigned: report layout breaks when printing'];
+  sT.forEach(function(t,k){stale.push({id:4000+k,title:t,dev:k===6?'':'Developer '+(k%5+1),state:'New',age:44-k*4,url:'#'})});
+  rep={demo:true,histOk:true,sprints:S,velocity:{n:4,items:36.5,pts:52.3},
+    qa:{waitSeen:true,waitI:new Array(46),testI:new Array(46),openWait:[{id:3000,days:5.2},{id:3002,days:3.1},{id:3004,days:1.4}],openTest:[{id:3001,days:2.3},{id:3003,days:0.8}],weeks:weeks,waitAvg:3.3,waitMed:2.8,testAvg:1.7,testMed:1.4},
+    bounce:{reached:46,bounced:11,rate:11/46,causes:{'Missing validation':5,'Unclear requirements':4,'Regression':3,'Not set':2}},
+    stale:stale,titleOf:titleOf,noRoot:false,hasComp:true};
+  $('#repWarn').innerHTML='';
+  setRepStatus('Demo data · not connected to Azure DevOps');
+  renderReport();
+}
+
+/* ---------- settings ---------- */
+function fillDatalists(){
+  var all=Object.keys(fieldMeta).sort();
+  $('#dlAll').innerHTML=all.map(function(k){return '<option value="'+esc(k)+'">'+esc(fieldMeta[k].name)+'</option>'}).join('');
+  $('#dlNum').innerHTML=all.filter(function(k){var t=fieldMeta[k].type;return t==='integer'||t==='double'}).map(function(k){return '<option value="'+esc(k)+'">'+esc(fieldMeta[k].name)+'</option>'}).join('');
+}
+var MAP={s_org:'org',s_project:'project',s_area:'area',s_types:'types',s_points:'fPoints',s_rem:'fRemaining',s_orig:'fOriginal',s_pri:'fPriority',s_sev:'fSeverity',s_sc:'fStateChange',s_blocked:'blockedTag',s_amber:'amberDays',s_red:'redDays',s_backlog:'backlogIter',s_stale:'staleDays',s_commit:'commitPct',s_caph:'capH',s_capp:'capP',s_rsp:'reportSprints',s_btag:'backlogTag',s_qaw:'qaWait',s_qat:'qaTest',s_root:'fRoot',s_comp:'fCompleted'};
+var NUMK={amberDays:1,redDays:1,staleDays:1,commitPct:1,capH:1,capP:1,reportSprints:1};
+function openSettings(){
+  Object.keys(MAP).forEach(function(id){$('#'+id).value=cfg[MAP[id]]});
+  $('#s_pat').value=getPat();
+  $('#s_remember').checked=!!sget(PATKEY,localStorage);
+  $('#dlg').showModal();
+}
+function saveSettings(){
+  var prevScope=cfg.org+'|'+cfg.project;
+  Object.keys(MAP).forEach(function(id){
+    var v=$('#'+id).value.trim(),k=MAP[id];
+    if(NUMK[k]){var n=Number(v);cfg[k]=(v!==''&&isFinite(n)&&n>=0)?n:DEFAULTS[k]}
+    else cfg[k]=v;
+  });
+  if(!cfg.commitPct||cfg.commitPct>100)cfg.commitPct=DEFAULTS.commitPct;
+  if(cfg.reportSprints<2||cfg.reportSprints>26)cfg.reportSprints=DEFAULTS.reportSprints;
+  sset(KEY,cfg);
+  var pat=$('#s_pat').value.trim();
+  sdel(PATKEY,sessionStorage);sdel(PATKEY,localStorage);
+  if(pat)sset(PATKEY,pat,$('#s_remember').checked?localStorage:sessionStorage);
+  if(prevScope!==cfg.org+'|'+cfg.project){iterations=[];selectedIter='';planTarget='';items=[];pool=[];rep=null}
+}
+function saveCfg(){sset(KEY,cfg)}
+
+/* ---------- events ---------- */
+function loadView(){view==='plan'?loadPlan():(view==='rep'?loadReport():load())}
+function setView(v){
+  view=v;
+  $('#viewStand').hidden=v!=='stand';$('#viewPlan').hidden=v!=='plan';$('#viewRep').hidden=v!=='rep';
+  $('#tabStand').className=v==='stand'?'on':'';$('#tabPlan').className=v==='plan'?'on':'';$('#tabRep').className=v==='rep'?'on':'';
+  $('#timerBox').style.display=v==='stand'?'flex':'none';
+  sset('sprintBoard.view',v,sessionStorage);
+  if(v==='plan'&&!pool.length&&!isDemo&&getPat())loadPlan();
+  if(v==='rep'&&!rep&&!isDemo&&getPat())loadReport();
+}
+$('#tabStand').onclick=function(){setView('stand')};
+$('#tabPlan').onclick=function(){setView('plan')};
+$('#tabRep').onclick=function(){setView('rep')};
+$('#settingsBtn').onclick=openSettings;
+$('#cancel').onclick=function(){$('#dlg').close()};
+$('#forget').onclick=function(){sdel(PATKEY,sessionStorage);sdel(PATKEY,localStorage);$('#s_pat').value='';$('#s_remember').checked=false};
+$('#form').addEventListener('submit',function(e){e.preventDefault();saveSettings();$('#dlg').close();loadView()});
+$('#refresh').onclick=function(){
+  if(isDemo){demo();return}
+  if(!getPat()){openSettings();return}
+  loadView();
+};
+$('#demoBtn').onclick=demo;
+$('#iter').onchange=function(){selectedIter=this.value;items=[];load()};
+$('#planIter').onchange=function(){planTarget=this.value;pool=[];loadPlan()};
+$('#fDone').onchange=function(){filt.done=this.checked;render()};
+$('#fBlocked').onchange=function(){filt.blocked=this.checked;render()};
+$('#fStale').onchange=function(){filt.stale=this.checked;render()};
+$('#fDev').onchange=function(){filt.dev=this.value;render()};
+$('#unit').onchange=function(){cfg.unit=this.value;saveCfg();renderPlan()};
+$('#onlyReady').onchange=function(){cfg.onlyReady=this.checked;saveCfg();renderPlan()};
+$('#blSource').onchange=function(){bl.source=this.value;renderBacklog()};
+$('#blSort').onchange=function(){bl.sort=this.value;renderBacklog()};
+$('#blReady').onchange=function(){bl.ready=this.checked;renderBacklog()};
+$('#blStale').onchange=function(){bl.stale=this.checked;renderBacklog()};
+$('#blSearch').oninput=function(){bl.q=this.value.trim();renderBacklog()};
+$('#viewPlan').addEventListener('click',function(e){
+  var t=e.target;
+  if(t.classList&&t.classList.contains('addb')&&!t.disabled){
+    var it=pool.filter(function(i){return i.id===Number(t.getAttribute('data-id'))})[0];
+    if(!it)return;
+    if(it.source==='target')delete draft.removed[it.id];else draft.added[it.id]=1;
+    saveDraft();renderPlan();
+  }else if(t.classList&&t.classList.contains('remb')){
+    var it2=pool.filter(function(i){return i.id===Number(t.getAttribute('data-id'))})[0];
+    if(!it2)return;
+    if(it2.source==='target')draft.removed[it2.id]=1;else delete draft.added[it2.id];
+    saveDraft();renderPlan();
+  }
+});
+$('#viewPlan').addEventListener('change',function(e){
+  var t=e.target;
+  if(t.classList&&t.classList.contains('capin')){
+    var d=t.getAttribute('data-dev'),k=unitIsH()?'h':'p',v=t.value===''?null:Math.max(0,Number(t.value));
+    cfg.caps[d]=cfg.caps[d]||{};cfg.caps[d][k]=v;saveCfg();renderPlan();
+  }
+});
+
+var tId=null,tLeft=900;
+function showT(){var t=Math.max(tLeft,0),el=$('#timer');el.textContent=Math.floor(t/60)+':'+('0'+(t%60)).slice(-2);el.className='timer'+(tLeft<=0?' over':(tLeft<=180?' warn':''))}
+$('#tbtn').onclick=function(){
+  if(tId){clearInterval(tId);tId=null;tLeft=900;this.textContent='Start 15:00'}
+  else{tLeft=900;this.textContent='Reset';tId=setInterval(function(){
+    tLeft--;showT();
+    if(tLeft<=0){clearInterval(tId);tId=null;$('#tbtn').textContent='Start 15:00'}
+  },1000)}
+  showT();
+};
+
+/* ---------- start ---------- */
+showT();
+$('#unit').value=cfg.unit;$('#onlyReady').checked=!!cfg.onlyReady;
+var startView=sget('sprintBoard.view',sessionStorage)||'stand';
+var h0=location.hash;
+if(h0==='#demo'||h0==='#demo-plan'||h0==='#demo-report'){demo();setView(h0==='#demo-plan'?'plan':(h0==='#demo-report'?'rep':startView))}
+else if(getPat()){setView(startView);loadView()}
+else{renderEmpty();renderPlanEmpty();renderReport();setView(startView)}
+})();
+</script>
+</body>
+</html>
