@@ -233,6 +233,7 @@ table.rt td.n,table.rt th.n{text-align:right;white-space:nowrap}
       <label><span>Default capacity per developer (hours a week)</span><input type="number" id="s_caph" min="0"></label>
       <label><span>Default capacity per developer (story points a week)</span><input type="number" id="s_capp" min="0"></label>
       <label><span>Sprints shown in reporting</span><input type="number" id="s_rsp" min="2" max="26"></label>
+      <label class="full"><span>Sprint names to show (the name starts with, comma separated, blank shows all). Example: Dev</span><input type="text" id="s_itf"></label>
       <label><span>Tag that marks backlog items</span><input type="text" id="s_btag"></label>
       <label class="full"><span>QA waiting states (comma separated)</span><input type="text" id="s_qaw"></label>
       <label class="full"><span>QA testing states (comma separated). If you only have one QA state, put it here.</span><input type="text" id="s_qat"></label>
@@ -260,7 +261,7 @@ var DEFAULTS={org:'SolvemCon',project:'Solvem - SDLC',area:'Solvem - SDLC\\Devel
   fPriority:'Microsoft.VSTS.Common.Priority',fSeverity:'Microsoft.VSTS.Common.Severity',
   fStateChange:'Microsoft.VSTS.Common.StateChangeDate',blockedTag:'Blocked',amberDays:3,redDays:7,
   backlogIter:'Solvem - SDLC\\Unallocated Pool',staleDays:20,commitPct:80,capH:30,capP:0,unit:'h',onlyReady:false,caps:{},
-  reportSprints:8,backlogTag:'Backlog',qaWait:'Ready for QA',qaTest:'In QA, QA, Testing',fRoot:'Custom.RootCause',fCompleted:'Microsoft.VSTS.Scheduling.CompletedWork'};
+  iterFilter:'Dev',reportSprints:8,backlogTag:'Backlog',qaWait:'Ready for QA',qaTest:'In QA, QA, Testing',fRoot:'Custom.RootCause',fCompleted:'Microsoft.VSTS.Scheduling.CompletedWork'};
 
 function sget(k,st){try{return JSON.parse((st||localStorage).getItem(k))}catch(e){return null}}
 function sset(k,v,st){try{(st||localStorage).setItem(k,JSON.stringify(v))}catch(e){}}
@@ -309,6 +310,8 @@ function flatten(node,out){
 async function loadIterations(){
   var root=await api('wit/classificationnodes/iterations?$depth=6&api-version=7.1');
   var out=[];flatten(root,out);
+  var pf=String(cfg.iterFilter||'').split(',').map(function(x){return x.trim().toLowerCase()}).filter(Boolean);
+  if(pf.length)out=out.filter(function(i){var n=i.name.toLowerCase();return pf.some(function(x){return n.indexOf(x)===0})});
   out.sort(function(a,b){return b.start-a.start});
   iterations=out;
 }
@@ -330,8 +333,14 @@ function optLabel(it,cur,nxt){
   var tag=cur&&it.path===cur.path?' (current)':(nxt&&it.path===nxt.path&&(!cur||nxt.path!==cur.path)?' (next)':'');
   return '<option value="'+esc(it.path)+'">'+esc(it.name)+tag+'  ·  '+fmt(it.start)+' – '+fmt(it.finish)+'</option>';
 }
+function iterWindow(cur,nxt){
+  var ci=cur?iterations.findIndex(function(i){return i.path===cur.path}):-1,a=Math.max(0,ci-5);
+  var list=iterations.slice(a,Math.max(a+26,ci+21));
+  [cur,nxt].forEach(function(x){if(x&&!list.some(function(i){return i.path===x.path}))list.push(x)});
+  return list.sort(function(p,q){return q.start-p.start});
+}
 function fillIterSelects(){
-  var cur=pickCurrent(),nxt=nextIter(),list=iterations.slice(0,24),h=list.map(function(it){return optLabel(it,cur,nxt)}).join('');
+  var cur=pickCurrent(),nxt=nextIter(),list=iterWindow(cur,nxt),h=list.map(function(it){return optLabel(it,cur,nxt)}).join('');
   $('#iter').innerHTML=h;$('#planIter').innerHTML=h;
   if(!selectedIter&&cur)selectedIter=cur.path;
   if(!planTarget&&nxt)planTarget=nxt.path;
@@ -412,7 +421,7 @@ async function load(){
   setStatus('Connecting to Azure DevOps…');
   try{
     await ensureCore();
-    if(!selectedIter)throw new Error('No iterations with start and end dates were found in this project.');
+    if(!selectedIter)throw new Error('No sprints with start and end dates were found'+(cfg.iterFilter?' whose name starts with "'+cfg.iterFilter+'". Check "Sprint names to show" in Settings.':' in this project.'));
     $('#iter').value=selectedIter;
     sprintInfo=iterations.filter(function(i){return i.path===selectedIter})[0]||null;
     var wf=wantedFields();
@@ -583,7 +592,7 @@ async function loadPlan(){
   setPlanStatus('Connecting to Azure DevOps…');
   try{
     await ensureCore();
-    if(!planTarget)throw new Error('No iterations with start and end dates were found in this project.');
+    if(!planTarget)throw new Error('No sprints with start and end dates were found'+(cfg.iterFilter?' whose name starts with "'+cfg.iterFilter+'". Check "Sprint names to show" in Settings.':' in this project.'));
     $('#planIter').value=planTarget;
     planInfo=iterations.filter(function(i){return i.path===planTarget})[0]||null;
     var cur=pickCurrent(),paths=[planTarget];
@@ -1091,7 +1100,7 @@ function fillDatalists(){
   $('#dlAll').innerHTML=all.map(function(k){return '<option value="'+esc(k)+'">'+esc(fieldMeta[k].name)+'</option>'}).join('');
   $('#dlNum').innerHTML=all.filter(function(k){var t=fieldMeta[k].type;return t==='integer'||t==='double'}).map(function(k){return '<option value="'+esc(k)+'">'+esc(fieldMeta[k].name)+'</option>'}).join('');
 }
-var MAP={s_org:'org',s_project:'project',s_area:'area',s_types:'types',s_points:'fPoints',s_rem:'fRemaining',s_orig:'fOriginal',s_pri:'fPriority',s_sev:'fSeverity',s_sc:'fStateChange',s_blocked:'blockedTag',s_amber:'amberDays',s_red:'redDays',s_backlog:'backlogIter',s_stale:'staleDays',s_commit:'commitPct',s_caph:'capH',s_capp:'capP',s_rsp:'reportSprints',s_btag:'backlogTag',s_qaw:'qaWait',s_qat:'qaTest',s_root:'fRoot',s_comp:'fCompleted'};
+var MAP={s_org:'org',s_project:'project',s_area:'area',s_types:'types',s_points:'fPoints',s_rem:'fRemaining',s_orig:'fOriginal',s_pri:'fPriority',s_sev:'fSeverity',s_sc:'fStateChange',s_blocked:'blockedTag',s_amber:'amberDays',s_red:'redDays',s_backlog:'backlogIter',s_stale:'staleDays',s_commit:'commitPct',s_caph:'capH',s_capp:'capP',s_rsp:'reportSprints',s_itf:'iterFilter',s_btag:'backlogTag',s_qaw:'qaWait',s_qat:'qaTest',s_root:'fRoot',s_comp:'fCompleted'};
 var NUMK={amberDays:1,redDays:1,staleDays:1,commitPct:1,capH:1,capP:1,reportSprints:1};
 function openSettings(){
   Object.keys(MAP).forEach(function(id){$('#'+id).value=cfg[MAP[id]]});
@@ -1100,7 +1109,7 @@ function openSettings(){
   $('#dlg').showModal();
 }
 function saveSettings(){
-  var prevScope=cfg.org+'|'+cfg.project;
+  var prevScope=cfg.org+'|'+cfg.project+'|'+cfg.iterFilter;
   Object.keys(MAP).forEach(function(id){
     var v=$('#'+id).value.trim(),k=MAP[id];
     if(NUMK[k]){var n=Number(v);cfg[k]=(v!==''&&isFinite(n)&&n>=0)?n:DEFAULTS[k]}
@@ -1112,7 +1121,7 @@ function saveSettings(){
   var pat=$('#s_pat').value.trim();
   sdel(PATKEY,sessionStorage);sdel(PATKEY,localStorage);
   if(pat)sset(PATKEY,pat,$('#s_remember').checked?localStorage:sessionStorage);
-  if(prevScope!==cfg.org+'|'+cfg.project){iterations=[];selectedIter='';planTarget='';items=[];pool=[];rep=null}
+  if(prevScope!==cfg.org+'|'+cfg.project+'|'+cfg.iterFilter){iterations=[];selectedIter='';planTarget='';items=[];pool=[];rep=null}
 }
 function saveCfg(){sset(KEY,cfg)}
 

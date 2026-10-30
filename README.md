@@ -29,6 +29,7 @@ Never commit a token to this repository.
 | --- | --- |
 | Story points field | the Azure DevOps default field |
 | Blocked tag | `Blocked` |
+| Sprint names to show | `Dev` (the name must start with this; blank shows every sprint) |
 | Backlog iteration | `Solvem - SDLC\Unallocated Pool` |
 | Backlog tag | `Backlog` |
 | QA waiting states | `Ready for QA` |
