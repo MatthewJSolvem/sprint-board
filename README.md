@@ -1,43 +1,19 @@
 # Sprint Board
 
-A single-file, read-only web app for Scrum on Azure DevOps. It has three tabs:
+Single-file HTML app for scrum sessions. Four screens: Sprint overview, Developer board, TMT tracker, Skills and assignments.
+Open `index.html` from GitHub Pages (or any static host). There is no build step.
 
-- **Stand-up**: the current sprint by developer, with blocked, stale and ageing flags.
-- **Planning**: the Friday planning view. Build a proposed sprint from the ranked backlog, check it against capacity, and copy the list of changes to make in Azure DevOps.
-- **Reporting**: scope growth, completed work and velocity, bugs against tasks, QA waiting against testing, send-backs by root cause, and a stale backlog list.
+## Token
+Create an Azure DevOps personal access token with **Work Items: Read and Write**, paste it into Settings.
+The token stays in the browser (session storage, or local storage if you tick "Remember"). **Never commit a token to this repository.**
 
-The app never writes to Azure DevOps. It only reads.
+## What it writes to Azure DevOps
+- Dragging a card changes `System.State`. Dragging to Done also sets Remaining Work to 0.
+- Picking a size writes Original Estimate (S 2, M 5, L 14, XL 24 hours). If the item is not in a Proposed state, only Original Estimate is written; otherwise Remaining Work is written too.
+- Assign on the Skills screen writes `System.AssignedTo`.
 
-## Use it
-
-1. Open `index.html` in a browser (or host it with GitHub Pages).
-2. Press **Settings** and fill in your organisation, project and area path.
-3. Paste a Personal Access Token with the **Work Items: Read** scope only, then **Save and load**.
-4. To look around without a token, open `index.html#demo`, `#demo-plan` or `#demo-report`.
-
-## Where data is kept
-
-- All data goes directly from your browser to `dev.azure.com`. There is no server.
-- The token is kept in the browser's session storage and is dropped when the tab closes, unless you tick "remember".
-- Settings and planning drafts are kept in the browser's local storage.
-
-Never commit a token to this repository.
-
-## Settings you will probably need to confirm
-
-| Setting | Default |
-| --- | --- |
-| Story points field | the Azure DevOps default field |
-| Blocked tag | `Blocked` |
-| Sprint names to show | `Dev` (the name must start with this; blank shows every sprint) |
-| Backlog iteration | `Solvem - SDLC\Unallocated Pool` |
-| Backlog tag | `Backlog` |
-| QA waiting states | `Ready for QA` |
-| QA testing states | `In QA, QA, Testing` |
-| Root cause field | `Custom.RootCause` |
-
-Until QA is split into a waiting and a testing state, all QA time on the Reporting tab shows as testing.
-
-## Hosting on GitHub Pages
-
-Settings, then Pages, then deploy from the `main` branch root. If the browser blocks calls to Azure DevOps from the hosted page, open the file locally instead.
+## Notes
+- States, work item types and field names are read from Azure DevOps. Client, Severity, Priority and Due Date fields are found by name; override them in Settings if needed.
+- Master Tracker children are found through parent links (recursive). Finished Master Trackers (Completed category) are hidden.
+- Photos and the skills matrix live in the browser. Use Photos and data to export or import them as text.
+- Add `#demo` to the address to try it with invented data.
