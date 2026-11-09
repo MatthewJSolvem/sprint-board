@@ -58,7 +58,7 @@ h2,h3,h4{margin:0;font-weight:600;text-wrap:balance}
 .btn.primary:hover{color:var(--accent-ink);filter:brightness(1.08)}
 .btn.sm{padding:2px 9px;font-size:12px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-select,input[type=text],input[type=password],input[type=number],input[type=search],textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 9px;width:100%}
+select,input[type=text],input[type=password],input[type=number],input[type=search],input[type=date],textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 9px;width:100%}
 textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 select{width:auto;min-width:210px;max-width:100%}
 .wrap{max-width:1500px;margin:0 auto}
@@ -237,6 +237,25 @@ table.t{border-collapse:collapse;width:100%}
 .sug .o .n{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .sug .o .r{font-size:12px;color:var(--mute)}
 
+/* card icons and the notes panel */
+.lg1{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;min-width:0}
+.ic{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:2px 5px;border-radius:6px;cursor:pointer;color:var(--mute);line-height:1.2;font-size:11px}
+.ic b{font-weight:600}
+.ic:hover{background:var(--surface2)}
+.ic.none{opacity:.4}
+.card:hover .ic.none,.ic.none:focus-visible{opacity:1}
+.ic.note{background:var(--grey-soft);color:var(--mute)}
+.ic.waiting{background:var(--amber-soft);color:var(--amber)}
+.ic.overdue{background:var(--red-soft);color:var(--red)}
+.ic.cleared{background:var(--green-soft);color:var(--green)}
+.ic.others{background:var(--accent-soft);color:var(--accent)}
+.ic.others.overdue{background:var(--red-soft);color:var(--red)}
+.dp-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.dp-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.hist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:10px;max-height:300px;overflow:auto}
+.hist li .pill{align-self:flex-start}
+.hist li{display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.dp .fgrid input[type=date],.dp .fgrid input[type=text]{width:100%}
 /* dialogs and toast */
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:0;width:min(780px,94vw);max-height:92vh;box-shadow:var(--shadow)}
 dialog::backdrop{background:rgba(10,12,24,.55)}
@@ -379,6 +398,8 @@ legend{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--
     </div>
   </form>
 </dialog>
+
+<dialog id="dlgCard"><div class="dbody dp" id="cardBody"></div></dialog>
 
 <dialog id="dlgData">
   <div class="dbody">
@@ -660,7 +681,7 @@ function catOf(type,state){
 
 /* ================= work items ================= */
 function baseFields(){
-  const f=['System.Title','System.WorkItemType','System.State','System.AssignedTo','System.Tags','System.ChangedDate','System.IterationPath'];
+  const f=['System.Title','System.WorkItemType','System.State','System.AssignedTo','System.Tags','System.ChangedDate','System.IterationPath','System.CommentCount'];
   Object.keys(S.F).forEach(k=>{const r=S.F[k];if(r&&S.fmeta[r]&&f.indexOf(r)<0)f.push(r)});
   return f;
 }
@@ -680,7 +701,7 @@ function normItem(w){
   const dueRaw=g(S.F.due);
   const it={id:w.id,rev:w.rev,title:F['System.Title']||'',type,state,cat,who,dev,uq,iter:F['System.IterationPath']||'',
     pri,sev:sevRaw==null?'':String(sevRaw),client:cl==null?'':(typeof cl==='object'?(cl.displayName||''):String(cl)),
-    orig,rem,tags,sc:sc?new Date(sc):null,age:sc?bizDays(new Date(sc),new Date()):0,
+    orig,rem,tags,comments:num(F['System.CommentCount'])||0,sc:sc?new Date(sc):null,age:sc?bizDays(new Date(sc),new Date()):0,
     due:dueRaw?new Date(dueRaw):null,
     url:'https://dev.azure.com/'+enc(cfg.org)+'/'+enc(cfg.project)+'/_workitems/edit/'+w.id};
   decorate(it);return it;
@@ -693,6 +714,9 @@ function decorate(it){
   it.critical=/critical/i.test(it.sev)||/^\s*1\b/.test(it.sev);
   it.p1=it.pri===1;
   it.blocked=it.tags.some(t=>t.toLowerCase()===String(cfg.blockedTag).toLowerCase());
+  it.waitDev='';it.cleared=false;
+  it.tags.forEach(t=>{const m=t.match(/^Waiting-(.+)$/i);if(m)it.waitDev=m[1];if(/^Dep-Cleared$/i.test(t))it.cleared=true});
+  if(it.waitDev)it.cleared=false;
   it.tmt=(String(it.title).match(/TMT\s*-?\s*(\d+)/i)||[])[1]||'';
 }
 async function wiqlIds(query,top){
@@ -922,7 +946,7 @@ function trackerRow(m){
   return {m:m.m,kids:m.kids,stages,pct,other,sprints:new Set(m.kids.map(k=>k.iter))};
 }
 
-SB.data={ensureCore,loadIterations,currentIter,loadSprint,loadScope,loadBurn,moveItem,setSize,assignItem,identityFor,lanesFor,laneOf,devLoad,loadTracker,trackerRow,STAGES,decorate,catOf,laneStateFor,fetchItems,wiqlIds};
+SB.data={patchItem,op,ensureCore,loadIterations,currentIter,loadSprint,loadScope,loadBurn,moveItem,setSize,assignItem,identityFor,lanesFor,laneOf,devLoad,loadTracker,trackerRow,STAGES,decorate,catOf,laneStateFor,fetchItems,wiqlIds};
 })();
 
 (function(){
@@ -1057,6 +1081,7 @@ function render(ds){
     if(i.critical)add(i,'red','Critical');
     if(i.p1)add(i,'amber','P1');
     if(i.blocked)add(i,'red','Blocked');
+    if(i.waitDev){const s2=SB.dep.status(i),w2=SB.dep.waitDays(i);add(i,s2==='overdue'?'red':'amber','Waiting on '+i.waitDev+(w2!=null?' '+w2+' d':''))}
     if((i.cat==='InProgress'||i.cat==='Resolved')&&i.age>cfg.stuck)add(i,'amber','Stuck '+i.age+' d in '+i.state);
   });
   const risks=Object.keys(flagged).map(k=>flagged[k]).sort((a,b)=>{
@@ -1109,6 +1134,7 @@ async function show(force){
     body.innerHTML=render(ds);
     SB.setStatus(ds.items.length+' items · updated '+new Date(ds.loadedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
     const again=()=>{if(me===tok&&S.view==='overview')body.innerHTML=render(ds)};
+    SB.dep.loadAll(ds).then(again);
     D.loadScope(ds).then(again).then(()=>D.loadBurn(ds)).then(again);
   }catch(e){if(me===tok)body.innerHTML=errBanner(e);SB.setStatus('')}
 }
@@ -1121,6 +1147,242 @@ function bind(){
 }
 SB.ov={show,bind,fillSprintSelect,itemLink,connectPanel,isConnected,errBanner,stats,healthOf};
 SB.fillSprintSelect=fillSprintSelect;
+})();
+
+(function(){
+'use strict';
+/* Notes and dependencies on a card.
+   Azure DevOps footprint: notes and events are work item comments (events start with "[Board]"),
+   the state of a dependency is a tag (Waiting-<developer> or Dep-Cleared), and a chosen item becomes a Predecessor link. */
+const {$,esc,cfg,S,api,enc,bizDays,fmtD,toast}=SB;
+const D=SB.data;
+const svg=p=>'<svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
+const IC={
+  add:svg('<path d="M2.5 3h11v7.5H8L5 13v-2.5H2.5z"/><path d="M8 5v3.5M6.25 6.75h3.5"/>'),
+  note:svg('<path d="M3 2.5h10v8l-3 3H3z"/><path d="M10 13.5v-3h3"/><path d="M5.5 6h5M5.5 8.5h3"/>'),
+  wait:svg('<path d="M4 2h8M4 14h8M5 2v2.5L8 8l-3 3.5V14M11 2v2.5L8 8l3 3.5V14"/>'),
+  done:svg('<circle cx="8" cy="8" r="6"/><path d="M5.5 8.2l1.7 1.8 3.4-3.6"/>'),
+  others:svg('<path d="M4 14V2.5M4 3h8l-1.8 2.7L12 8.5H4"/>')
+};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayIso=()=>iso(new Date());
+const fmtIso=s=>{const p=String(s).split('-');return fmtD(new Date(Number(p[0]),Number(p[1])-1,Number(p[2])))};
+function plain(h){
+  const s=String(h||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p|li)>/gi,'\n');
+  const doc=new DOMParser().parseFromString(s,'text/html');
+  return (doc.body.textContent||'').replace(/\n{3,}/g,'\n\n').trim();
+}
+const toHtml=t=>esc(t).replace(/\n/g,'<br>');
+
+/* ---------- events written as comments ---------- */
+function parseEv(text){
+  const t=String(text).trim();let m;
+  if((m=t.match(/^\[Board\] Waiting on (\S+?)(?: · promised (\d{4}-\d{2}-\d{2}))?(?: · item #(\d+))?\.?$/)))return {kind:'wait',dev:m[1],promise:m[2]||'',item:m[3]?Number(m[3]):0};
+  if((m=t.match(/^\[Board\] Dependency on (\S+?) completed/)))return {kind:'done',dev:m[1]};
+  if((m=t.match(/^\[Board\] Promise changed to (\d{4}-\d{2}-\d{2})(?:\. Reason: ([\s\S]*))?/)))return {kind:'promise',date:m[1],reason:m[2]||''};
+  if((m=t.match(/^\[Board\] Promise missed\. Reason: ([\s\S]*)/)))return {kind:'missed',reason:m[1]};
+  return null;
+}
+async function fetchComments(it){
+  const r=await api('wit/workItems/'+it.id+'/comments?api-version=7.1-preview.4&order=asc');
+  return (r.comments||[]).map(c=>({id:c.id,text:plain(c.text),by:(c.createdBy&&c.createdBy.displayName)||'',at:new Date(c.createdDate)}));
+}
+function applyDetails(it,cm){
+  let dep=null;
+  cm.forEach(c=>{
+    const e=parseEv(c.text);if(!e)return;
+    if(e.kind==='wait')dep={dev:e.dev,since:c.at,promise:e.promise,item:e.item,missed:[],doneAt:null,linked:null};
+    else if(dep&&e.kind==='promise')dep.promise=e.date;
+    else if(dep&&e.kind==='missed')dep.missed.push(e.reason);
+    else if(dep&&e.kind==='done')dep.doneAt=c.at;
+  });
+  it.dep=dep&&it.waitDev?dep:null;
+  it.depLoaded=true;
+}
+const waitDays=it=>it.dep&&it.dep.since?bizDays(it.dep.since,new Date()):null;
+function status(it){
+  if(it.waitDev){
+    const d=it.dep;
+    if(d){
+      if(d.promise&&d.promise<todayIso())return 'overdue';
+      const w=waitDays(it);if(w!=null&&w>cfg.stuck)return 'overdue';
+      if(d.linked&&d.linked.blocked)return 'overdue';
+    }
+    return 'waiting';
+  }
+  if(it.cleared)return 'cleared';
+  if(it.comments>0)return 'note';
+  return '';
+}
+async function pool(list,n,fn){
+  let i=0;
+  await Promise.all(Array.from({length:Math.min(n,list.length)},async()=>{while(i<list.length){const x=list[i++];await fn(x)}}));
+}
+async function loadAll(ds){
+  const waiting=ds.items.filter(i=>i.waitDev&&!i.depLoaded);
+  await pool(waiting,5,async it=>{try{applyDetails(it,await fetchComments(it))}catch(e){it.depLoaded=true}});
+  const ids=Array.from(new Set(ds.items.filter(i=>i.dep&&i.dep.item&&!i.dep.linked).map(i=>i.dep.item)));
+  if(ids.length){
+    try{
+      const li=await D.fetchItems(ids);
+      ds.items.forEach(i=>{if(i.dep&&i.dep.item)i.dep.linked=li.find(x=>x.id===i.dep.item)||null});
+    }catch(e){}
+  }
+}
+const waitersOf=(ds,dev)=>ds.items.filter(i=>i.waitDev&&i.waitDev===dev&&i.open&&i.dev!==dev);
+
+/* ---------- icons on the card ---------- */
+function btn(it){
+  const s=status(it)||'none',w=waitDays(it);
+  const label={none:'Add a note or a dependency',note:'Notes on this card',waiting:'Waiting on '+it.waitDev,overdue:'Overdue. Waiting on '+it.waitDev,cleared:'Dependency completed'}[s];
+  const icon={none:IC.add,note:IC.note,waiting:IC.wait,overdue:IC.wait,cleared:IC.done}[s];
+  const extra=(s==='waiting'||s==='overdue')?'<b>'+esc(it.waitDev)+(w!=null?' · '+w+' d':'')+'</b>':'';
+  return '<button type="button" class="ic '+s+'" data-act="dep" title="'+esc(label)+'" aria-label="'+esc(label)+'">'+icon+extra+'</button>';
+}
+function othersBtn(it,ds){
+  if(!ds||!it.dev)return '';
+  const w=waitersOf(ds,it.dev).filter(x=>x.dep&&x.dep.item===it.id);
+  if(!w.length)return '';
+  const names=Array.from(new Set(w.map(x=>x.dev||x.who||'Someone'))).join(', ');
+  const od=w.some(x=>status(x)==='overdue');
+  return '<button type="button" class="ic others'+(od?' overdue':'')+'" data-act="dep" title="'+esc(names)+' is waiting on this card" aria-label="'+esc(names)+' is waiting on this card">'+IC.others+'<b>'+w.length+'</b></button>';
+}
+
+/* ---------- writes ---------- */
+const stripDep=t=>!/^Waiting-/i.test(t)&&!/^Dep-Cleared$/i.test(t);
+function tagValue(it,add){return it.tags.filter(stripDep).concat(add).join('; ')}
+function setTags(it,add){it.tags=tagValue(it,add).split('; ').filter(Boolean);D.decorate(it)}
+async function comment(it,text){
+  const r=await api('wit/workItems/'+it.id+'/comments?api-version=7.1-preview.4',{method:'POST',body:{text:toHtml(text)}});
+  it.comments=(it.comments||0)+1;
+  const c={id:r&&r.id,text,by:(r&&r.createdBy&&r.createdBy.displayName)||'You',at:new Date()};
+  cur.cm.push(c);return c;
+}
+async function startWaiting(it,dev,promise,itemId,note){
+  const ops=[D.op('System.Tags',tagValue(it,['Waiting-'+dev]))];
+  const link={op:'add',path:'/relations/-',value:{rel:'System.LinkTypes.Dependency-Reverse',url:'https://dev.azure.com/'+enc(cfg.org)+'/_apis/wit/workItems/'+itemId,attributes:{comment:'Added from Sprint Board'}}};
+  try{await D.patchItem(it,itemId?ops.concat([link]):ops)}
+  catch(e){if(itemId)await D.patchItem(it,ops);else throw e}
+  setTags(it,['Waiting-'+dev]);
+  await comment(it,'[Board] Waiting on '+dev+(promise?' · promised '+promise:'')+(itemId?' · item #'+itemId:'')+'.');
+  if(note)await comment(it,note);
+  applyDetails(it,cur.cm);
+  await loadAll({items:[it]});
+}
+async function markComplete(it){
+  const dev=it.waitDev;
+  await D.patchItem(it,[D.op('System.Tags',tagValue(it,['Dep-Cleared']))]);
+  setTags(it,['Dep-Cleared']);
+  await comment(it,'[Board] Dependency on '+dev+' completed.');
+  it.dep=null;
+}
+async function savePromise(it,date,reason){
+  await comment(it,'[Board] Promise changed to '+date+'.'+(reason?' Reason: '+reason:''));
+  applyDetails(it,cur.cm);
+}
+async function saveMissed(it,reason){
+  await comment(it,'[Board] Promise missed. Reason: '+reason);
+  applyDetails(it,cur.cm);
+}
+
+/* ---------- the panel ---------- */
+const cur={it:null,ds:null,cm:[],busy:false,err:''};
+function evText(e,c){
+  if(e.kind==='wait')return ['amber','Waiting on '+e.dev+(e.promise?', promised '+fmtIso(e.promise):'')+(e.item?', item #'+e.item:'')];
+  if(e.kind==='done')return ['green','Dependency on '+e.dev+' completed'];
+  if(e.kind==='promise')return ['amber','Promise moved to '+fmtIso(e.date)+(e.reason?'. '+e.reason:'')];
+  return ['red','Promise missed. '+e.reason];
+}
+function render(){
+  const it=cur.it,ds=cur.ds,body=$('#cardBody'),busy=cur.busy?' disabled':'';
+  const keep={};body.querySelectorAll('input,textarea,select').forEach(e=>{if(e.id)keep[e.id]=e.value});
+  const st=status(it),d=it.dep,w=waitDays(it);
+  const waiters=ds?waitersOf(ds,it.dev):[];
+  let h='<div style="display:flex;justify-content:space-between;gap:12px;align-items:start"><div><h2>'+esc(it.title)+'</h2><div class="sub">'+esc(it.type)+' '+it.id+' · '+esc(it.who||'Unassigned')+' · '+esc(it.state)+' · <a href="'+esc(it.url)+'" target="_blank" rel="noopener">Open in Azure DevOps</a></div></div><button class="btn sm" type="button" data-do="close">Close</button></div>';
+  if(cur.err)h+='<div class="banner err">'+esc(cur.err)+'</div>';
+  if(waiters.length)h+='<div class="banner" style="border-left-color:var(--accent);background:var(--accent-soft)"><b>Waiting on '+esc(it.dev)+':</b> '+waiters.map(x=>esc(x.title)+' ('+esc(x.who||x.dev)+(x.dep&&x.dep.item===it.id?', this card':'')+')').join('; ')+'</div>';
+  h+='<fieldset><legend>Dependency</legend>';
+  if(it.waitDev){
+    const lk=d&&d.linked;
+    h+='<div class="dp-row"><span class="pill '+(st==='overdue'?'red':'amber')+'">'+(st==='overdue'?'Overdue':'Waiting')+'</span><b>'+esc(it.waitDev)+'</b>'+(d&&d.since?'<span class="sub">since '+esc(fmtD(d.since))+(w!=null?', '+w+' working day'+(w===1?'':'s'):'')+'</span>':'')+(d&&d.promise?'<span class="pill '+(d.promise<todayIso()?'red':'')+'">Promised '+esc(fmtIso(d.promise))+'</span>':'<span class="pill">No date promised</span>')+'</div>';
+    if(lk)h+='<p class="sub" style="margin:6px 0 0">Their item: <a href="'+esc(lk.url)+'" target="_blank" rel="noopener">'+esc(lk.title)+'</a> · '+esc(lk.state)+(lk.blocked?' · <b style="color:var(--red)">blocked</b>':'')+'</p>';
+    if(lk&&lk.done)h+='<div class="banner" style="margin-top:8px;border-left-color:var(--green-fill);background:var(--green-soft)">Their item is done. Mark this dependency complete if it unblocks you.</div>';
+    h+='<div class="dp-actions"><button class="btn primary" type="button" data-do="complete"'+busy+'>Mark dependency complete</button></div>';
+    const missed=d&&d.promise&&d.promise<todayIso();
+    h+='<div class="fgrid" style="margin-top:10px"><label>'+(missed?'New date promised':'Change the promised date')+'<input type="date" id="dpNewDate" min="'+todayIso()+'"></label><label>'+(missed?'Reason it was missed (required)':'Reason (optional)')+'<input type="text" id="dpReason" maxlength="300"></label></div><div class="dp-actions"><button class="btn" type="button" data-do="promise"'+busy+'>Save date</button>'+(missed?'<button class="btn" type="button" data-do="missed"'+busy+'>Save reason only</button>':'')+'</div>';
+    if(d&&d.missed.length)h+='<p class="sub" style="margin:8px 0 0">Reasons given so far: '+d.missed.map(esc).join(' | ')+'</p>';
+  }else{
+    if(it.cleared)h+='<div class="dp-row"><span class="pill green">Completed</span><span class="sub">The last dependency on this card was cleared. Add a new one below if something else is holding it up.</span></div>';
+    const devs=SB.devs().filter(x=>x.name!==it.dev);
+    h+='<div class="fgrid"><label>Waiting on<select id="dpDev" style="min-width:0;width:100%"><option value="">Choose a developer…</option>'+devs.map(x=>'<option>'+esc(x.name)+'</option>').join('')+'</select></label>'+
+      '<label>Their item (optional)<select id="dpItem" style="min-width:0;width:100%"><option value="">Not a specific item</option></select></label>'+
+      '<label>Date they promised (optional)<input type="date" id="dpDate" min="'+todayIso()+'"></label>'+
+      '<label>Note (optional)<input type="text" id="dpNote" maxlength="300"></label></div>'+
+      '<div class="dp-actions"><button class="btn primary" type="button" data-do="wait"'+busy+'>Mark as waiting</button></div>';
+  }
+  h+='</fieldset><fieldset><legend>Notes and history</legend>'+
+    '<textarea id="dpText" rows="3" placeholder="Write a note. It is saved as a comment on the work item."></textarea><div class="dp-actions"><button class="btn primary" type="button" data-do="note"'+busy+'>Add note</button></div>'+
+    '<ul class="hist">'+(cur.cm.length?cur.cm.slice().reverse().map(c=>{
+      const e=parseEv(c.text),when=c.at.toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      if(e){const t=evText(e,c);return '<li><span class="pill '+t[0]+'">'+esc(t[1])+'</span><span class="sub">'+esc(c.by)+' · '+esc(when)+'</span></li>'}
+      return '<li><div>'+esc(c.text).replace(/\n/g,'<br>')+'</div><span class="sub">'+esc(c.by)+' · '+esc(when)+'</span></li>';
+    }).join(''):'<li class="mute">No notes yet.</li>')+'</ul></fieldset>';
+  body.innerHTML=h;
+  if(keep.dpDev!==undefined){const d=$('#dpDev');if(d)d.value=keep.dpDev}
+  fillItems();
+  Object.keys(keep).forEach(k=>{const e=$('#'+k);if(e&&k!=='dpDev'&&keep[k]!=='')e.value=keep[k]});
+}
+function fillItems(){
+  const dsel=$('#dpDev'),isel=$('#dpItem');if(!dsel||!isel)return;
+  const dev=dsel.value;
+  const opts=(cur.ds&&dev?cur.ds.items.filter(i=>i.dev===dev&&i.open):[]);
+  isel.innerHTML='<option value="">Not a specific item</option>'+opts.map(i=>'<option value="'+i.id+'">#'+i.id+' '+esc(i.title.length>70?i.title.slice(0,67)+'…':i.title)+'</option>').join('');
+}
+async function run(fn,okMsg){
+  if(cur.busy)return;
+  cur.busy=true;cur.err='';render();
+  try{await fn();if(okMsg)toast(okMsg)}
+  catch(e){cur.err=e.message}
+  finally{cur.busy=false;render();if(SB.dep.onChange)SB.dep.onChange()}
+}
+async function open(it,ds){
+  cur.it=it;cur.ds=ds;cur.cm=[];cur.err='';cur.busy=false;
+  $('#cardBody').innerHTML='<p class="mute">Reading notes…</p>';
+  $('#dlgCard').showModal();
+  try{
+    cur.cm=await fetchComments(it);
+    if(it.waitDev){applyDetails(it,cur.cm);await loadAll({items:[it]})}
+  }catch(e){cur.err=e.message}
+  render();
+}
+function bind(){
+  const dlg=$('#dlgCard');
+  dlg.addEventListener('change',e=>{if(e.target.id==='dpDev')fillItems()});
+  dlg.addEventListener('click',e=>{
+    const b=e.target.closest('[data-do]');if(!b)return;
+    const a=b.getAttribute('data-do'),it=cur.it,v=id=>($('#'+id)||{}).value||'';
+    if(a==='close'){dlg.close();return}
+    if(a==='note'){const t=v('dpText').trim();if(!t){cur.err='Write the note first.';render();return}run(()=>comment(it,t),'Note saved to Azure DevOps.')}
+    else if(a==='wait'){
+      const dev=v('dpDev');if(!dev){cur.err='Choose who you are waiting on.';render();return}
+      const itemId=Number(v('dpItem'))||0,date=v('dpDate'),note=v('dpNote').trim();
+      run(()=>startWaiting(it,dev,date,itemId,note),'Marked as waiting on '+dev+'.');
+    }
+    else if(a==='complete')run(()=>markComplete(it),'Dependency marked complete.');
+    else if(a==='promise'){
+      const date=v('dpNewDate'),reason=v('dpReason').trim();
+      if(!date){cur.err='Pick the new date.';render();return}
+      const missed=it.dep&&it.dep.promise&&it.dep.promise<todayIso();
+      if(missed&&!reason){cur.err='Give the reason the last date was missed.';render();return}
+      run(()=>savePromise(it,date,reason),'Date saved.');
+    }
+    else if(a==='missed'){
+      const reason=v('dpReason').trim();if(!reason){cur.err='Write the reason first.';render();return}
+      run(()=>saveMissed(it,reason),'Reason saved.');
+    }
+  });
+}
+SB.dep={btn,othersBtn,status,waitDays,waitersOf,loadAll,open,bind,onChange:null,applyDetails,parseEv};
 })();
 
 (function(){
@@ -1157,6 +1419,7 @@ async function show(force){
     if(me!==tok)return;
     cur.ds=ds;cur.dev=dev;
     render();
+    SB.dep.loadAll(ds).then(()=>{if(cur.ds===ds&&S.view==='board')render()});
     SB.setStatus(ds.items.length+' items in the sprint · updated '+new Date(ds.loadedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
   }catch(e){if(me===tok)body.innerHTML=O.errBanner(e);SB.setStatus('')}
 }
@@ -1169,7 +1432,7 @@ function card(it){
   const stuck=(it.cat==='InProgress'||it.cat==='Resolved')&&it.age>cfg.stuck;
   const size=it.size?'<button type="button" class="size '+it.size+'" data-act="size" title="'+(it.size==='XL'?'XL: split this into smaller items. ':'')+r1(it.hours)+' h in Azure DevOps. Click to change the size.">'+it.size+'</button>':'<button type="button" class="size none" data-act="size" title="No effort set. Click to pick a size.">No size</button>';
   return '<div class="card'+(it._to?' saving':'')+'" draggable="true" data-id="'+it.id+'">'+
-    '<div class="ln first"><span class="tp">'+esc(it.type)+' '+it.id+'</span><button type="button" class="mvb" data-act="move" aria-label="Move this item to another state" title="Move to another state">⋯</button></div>'+
+    '<div class="ln first"><span class="lg1">'+SB.dep.btn(it)+SB.dep.othersBtn(it,cur.ds)+'<span class="tp">'+esc(it.type)+' '+it.id+'</span></span><button type="button" class="mvb" data-act="move" aria-label="Move this item to another state" title="Move to another state">⋯</button></div>'+
     '<a class="tt" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.title||('Work item '+it.id))+'</a>'+
     '<div class="ln">'+(it.client?'<span class="pill accent">'+esc(it.client)+'</span>':'<span class="pill">No client</span>')+sevPill(it)+(it.pri!=null?'<span class="pill '+(it.p1?'amber':'')+'">P'+it.pri+'</span>':'')+(it.blocked?'<span class="pill red">Blocked</span>':'')+'</div>'+
     '<div class="ln">'+size+'<span class="mono" style="'+(stuck?'color:var(--amber)':'')+'">'+it.age+' d in '+esc(it.state)+'</span></div></div>';
@@ -1190,6 +1453,7 @@ function render(){
   const dueToday=mine.filter(i=>i.open&&i.due&&atMidnight(i.due).getTime()===today.getTime()).length;
   const overdue=mine.filter(i=>i.open&&i.due&&atMidnight(i.due)<today).length;
   const openIt=mine.filter(i=>i.open).sort((a,b)=>b.age-a.age)[0];
+  const waiters=SB.dep.waitersOf(ds,cur.dev);
   const hc=hours>cfg.target?'red':(hours<cfg.low?'amber':'green');
   const cap=Math.max(cfg.target,hours);
   const stats='<div class="stats">'+
@@ -1198,7 +1462,8 @@ function render(){
     '<div class="stat"><b class="num">'+doneWk.length+'</b><span>Done this week ('+r1(doneWk.reduce((s,i)=>s+i.hours,0))+' h)</span></div>'+
     '<div class="stat '+(crit?'red':'')+'"><b class="num">'+crit+'</b><span>Critical or P1 open</span></div>'+
     '<div class="stat '+(overdue?'red':(dueToday?'amber':''))+'"><b class="num">'+dueToday+' / '+overdue+'</b><span>Due today / overdue</span></div>'+
-    '<div class="stat '+(openIt&&openIt.age>cfg.stuck?'amber':'')+'" title="'+esc(openIt?openIt.title:'')+'"><b class="num">'+(openIt?openIt.age+' d':'None')+'</b><span>Oldest item in its state'+(openIt?' ('+esc(openIt.state)+')':'')+'</span></div></div>';
+    '<div class="stat '+(openIt&&openIt.age>cfg.stuck?'amber':'')+'" title="'+esc(openIt?openIt.title:'')+'"><b class="num">'+(openIt?openIt.age+' d':'None')+'</b><span>Oldest item in its state'+(openIt?' ('+esc(openIt.state)+')':'')+'</span></div>'+
+    '<div class="stat '+(waiters.some(w=>SB.dep.status(w)==='overdue')?'red':(waiters.length?'amber':''))+'"><b class="num">'+waiters.length+'</b><span>Others waiting on '+esc(cur.dev)+(waiters.length?': '+esc(Array.from(new Set(waiters.map(w=>w.dev||w.who))).join(', ')):'')+'</span></div></div>';
   const head='<div class="devhead"><div class="who">'+avatar(cur.dev,'lg')+'<div><h2>'+esc(cur.dev)+'</h2><div class="sub">'+mine.length+(mine.length===1?' bug or task':' bugs and tasks')+(info?' · '+esc(info.name):'')+'</div><button class="btn sm" type="button" data-act="photo" style="margin-top:4px">Change photo</button></div></div>'+stats+'</div>';
   const cols=lanes.map(l=>{
     const its=mine.filter(i=>{const lk=i._to||(D.laneOf(i,lanes)||{}).key;return lk===l.key});
@@ -1242,6 +1507,7 @@ function bind(){
     if(a==='size'){
       openPop(act,'Set size for this item',SIZES.map(s=>({v:s.k,label:s.k+'  ·  '+s.label,note:s.h+' h'})),k=>doSize(it,k),
         it.cat==='Proposed'?'Writes Original Estimate and Remaining Work.':'Writes Original Estimate only. Remaining Work stays as it is.');
+    }else if(a==='dep'){SB.dep.open(it,cur.ds)
     }else if(a==='move'){
       openPop(act,'Move to',cur.lanes.map(l=>{const ok=!!D.laneStateFor(it,l);return {v:l.key,label:l.label,note:l.key===(D.laneOf(it,cur.lanes)||{}).key?'now':(ok?'':'not for '+it.type),disabled:!ok||l.key===(D.laneOf(it,cur.lanes)||{}).key}}),
         k=>{const l=cur.lanes.find(x=>x.key===k);if(l)doMove(it,l)});
@@ -1271,6 +1537,7 @@ function bind(){
     if(it&&lane)doMove(it,lane);
   });
 }
+SB.dep.onChange=()=>{if(S.view==='board'&&cur.ds)render()};
 SB.bd={show,bind,render,fillDevSelect,cur};
 })();
 
@@ -1574,6 +1841,16 @@ function genSprint(it){
     mk('TMT'+TMTPOOL[5]+' Supplier invoice duplicate check','','2 - High',5);
     mk('TMT'+TMTPOOL[7]+' Payment batch rejected by the bank file','Bitou','1 - Critical',8);
   }
+  if(key===0){
+    const mine=n=>ids.map(id=>store.items[id]).filter(o=>o.dev===n&&o.type!=='x');
+    const k=mine('Kevin'),a=mine('Ali'),ago=days=>new Date(Date.now()-days*86400000).toISOString();
+    const iso=d=>d.toISOString().slice(0,10),plus=n=>iso(new Date(Date.now()+n*86400000));
+    const ev=(o,t,days)=>{(o.comments=o.comments||[]).push({id:o.comments.length+1,text:t,createdBy:{displayName:'Matthew (demo)'},createdDate:ago(days)})};
+    if(k[0]&&a[0]){k[0].tagsOverride='Waiting-Ali';ev(k[0],'[Board] Waiting on Ali · promised '+plus(1)+' · item #'+a[0].id+'.',2);ev(k[0],'Need the report layout from Ali before the totals can be checked.',2)}
+    if(k[1]&&a[1]){k[1].tagsOverride='Waiting-Ali';ev(k[1],'[Board] Waiting on Ali · promised '+plus(-2)+'.',6)}
+    if(k[2]){k[2].tagsOverride='Dep-Cleared';ev(k[2],'[Board] Waiting on Mark · promised '+plus(-3)+'.',6);ev(k[2],'[Board] Dependency on Mark completed.',3)}
+    if(k[3])ev(k[3],'Client confirmed the new format by phone. Waiting for the sample file.',1);
+  }
   store.sprints[key]=ids;return ids;
 }
 function itemState(o,idx){
@@ -1598,7 +1875,7 @@ function toWI(o,fields,asOfIdx){
   const inSprint=asOfIdx==null||o.joinDay<=asOfIdx;
   const origNow=o.origOverride!==undefined?o.origOverride:o.orig;
   const all={
-    'System.Title':o.title,'System.WorkItemType':o.type,'System.State':st,'System.AssignedTo':o.assigned||undefined,'System.Tags':o.blocked?'Blocked':'',
+    'System.Title':o.title,'System.WorkItemType':o.type,'System.State':st,'System.AssignedTo':o.assigned||undefined,'System.Tags':o.tagsOverride!==undefined?o.tagsOverride:(o.blocked?'Blocked':''),'System.CommentCount':(o.comments||[]).length,
     'System.ChangedDate':new Date().toISOString(),'System.IterationPath':inSprint?o.iter:'Solvem - SDLC\\Unallocated Pool',
     [REF.orig]:asOfIdx==null?origNow:o.orig,[REF.rem]:remAt(o,asOfIdx),[REF.sev]:o.sev,[REF.pri]:o.pri,[REF.cl]:o.client||undefined,
     [REF.due]:o.due?o.due.toISOString():undefined,
@@ -1656,6 +1933,12 @@ async function backend(path,opts){
     const t=decodeURIComponent(m[1]);if(!STATES[t])throw new SB.ApiError('Work item type '+t+' does not exist.',404);
     return {value:FIELDS.map(f=>({referenceName:f[0]}))};
   }
+  if((m=path.match(/^wit\/workitems\/(\d+)\/comments/i))){
+    const o=store.items[Number(m[1])];if(!o)throw new SB.ApiError('Work item does not exist.',404);
+    o.comments=o.comments||[];
+    if(method==='POST'){const c={id:o.comments.length+1,text:body.text,createdBy:{displayName:'Matthew (demo)'},createdDate:new Date().toISOString()};o.comments.push(c);return clone(c)}
+    return {count:o.comments.length,comments:clone(o.comments)};
+  }
   if(path.indexOf('wit/wiql')===0&&method==='POST'){
     const q=body.query;
     if(/FROM WorkItemLinks/i.test(q)){
@@ -1702,7 +1985,7 @@ async function backend(path,opts){
     const o=store.items[Number(m[1])];
     if(!o)throw new SB.ApiError('Work item does not exist.',404);
     const upd={};
-    body.forEach(op=>{upd[op.path.replace('/fields/','')]=op.value});
+    body.forEach(op=>{if(op.path.indexOf('/fields/')===0)upd[op.path.replace('/fields/','')]=op.value;else if(op.path.indexOf('/relations/')===0){o.links=(o.links||[]).concat([op.value.url])}});
     if(upd['System.State']!==undefined){
       const to=upd['System.State'],from=itemState(o);
       if(!STATES[o.type].some(s=>s[0]===to))throw new SB.ApiError("TF401320: The value '"+to+"' is not a valid state for a "+o.type+'.',400);
@@ -1714,6 +1997,7 @@ async function backend(path,opts){
     }
     if(upd[REF.orig]!==undefined)o.origOverride=upd[REF.orig];
     if(upd[REF.rem]!==undefined)o.remOverride=upd[REF.rem];
+    if(upd['System.Tags']!==undefined)o.tagsOverride=upd['System.Tags'];
     if(upd['System.AssignedTo']!==undefined){
       const un=String(upd['System.AssignedTo']).match(/<([^>]+)>/);
       const nm=DEV_NAMES.find(d=>un&&un[1]===d.toLowerCase()+'@demo.example');
@@ -1834,7 +2118,7 @@ function importText(txt){
 /* ---------- wiring ---------- */
 function init(){
   SB.loadMatrix();
-  SB.ov.bind();SB.bd.bind();SB.tr.bind();SB.sk.bind();
+  SB.ov.bind();SB.bd.bind();SB.dep.bind();SB.tr.bind();SB.sk.bind();
   $$('.tabs button').forEach(b=>b.addEventListener('click',()=>nav(b.getAttribute('data-go'))));
   window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ROUTES.indexOf(h)>=0&&h!==S.view)nav(h)});
   $('#btnSettings').onclick=openSettings;
