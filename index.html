@@ -1097,7 +1097,7 @@ function reworkPanel(st){
   if(!S.F.rej)return '';
   const open=st.rwOpen.slice().sort((a,b)=>b.age-a.age),none=open.filter(i=>i.rwNone).length;
   const rows=open.map(i=>'<tr><td>'+itemLink(i)+'</td><td>'+(i.who?esc(i.who):'<span class="pill red">Unassigned</span>')+'</td><td>'+esc(i.state)+'</td><td class="num">'+(i.rwNone?'<span class="pill red">Pick 1, 3 or 5 h on the board</span>':'<b style="color:var(--red)">'+r1(i.rwHours)+' h</b>')+'</td></tr>').join('');
-  return '<div class="panel rwp" style="margin-bottom:14px"><h3>Test rejected rework</h3><div class="rwgrid"><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+open.length+'</b> <small>open</small></div><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+r1(st.rwH)+' h</b> <small>rework remaining</small></div><div><b class="num">'+st.rwFixed.length+'</b> <small>fixed and done</small></div>'+(none?'<div><b class="num" style="color:var(--red)">'+none+'</b> <small>still to be picked</small></div>':'')+'</div>'+
+  return '<div class="panel rwp" style="margin-top:14px"><h3>Test rejected rework</h3><div class="rwgrid"><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+open.length+'</b> <small>open</small></div><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+r1(st.rwH)+' h</b> <small>rework remaining</small></div><div><b class="num">'+st.rwFixed.length+'</b> <small>fixed and done</small></div>'+(none?'<div><b class="num" style="color:var(--red)">'+none+'</b> <small>still to be picked</small></div>':'')+'</div>'+
     '<p class="sub" style="margin:0 0 8px">Returned by QA or the client. Tracked as separate effort: not counted in hours committed, scope change, completed work or sprint health. Rework hours (1, 3 or 5) are picked on the board card and kept in this browser only; nothing is written to Azure DevOps.</p>'+
     (open.length?'<div class="table-wrap"><table class="t"><thead><tr><th>Item</th><th>Owner</th><th>State</th><th>Rework</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="mute" style="margin:0">No test rejected items are open in this sprint.</p>')+'</div>';
 }
@@ -1160,12 +1160,12 @@ function render(ds){
       '<div class="panel"><h3>Scope change</h3>'+scopeHtml+'</div>'+
       '<div class="panel"><h3>Effort</h3><div class="big num">'+st.noEff+' <small>item'+(st.noEff===1?'':'s')+' with no effort</small></div><div class="sub num">'+Math.round(st.noEffPct)+'% of '+st.total+' items</div><div class="meter '+(st.noEffPct>20?'red':st.noEffPct>10?'amber':'green')+'"><i style="width:'+Math.min(100,st.noEffPct)+'%"></i></div></div>'+
     '</div>'+
-    reworkPanel(st)+
     '<div class="grid g2"><div class="panel"><h3>Burndown, hours remaining</h3>'+(ds.burn?burnSvg(ds.burn):'<p class="mute" style="margin:0">Reading history…</p>')+'</div>'+
     '<div class="panel"><h3>Items by state</h3>'+stateBar(st)+'<h3 style="margin-top:18px">Shirt sizes</h3>'+sizeBar(st)+'</div></div>'+
     '<div class="panel" style="margin-bottom:14px"><h3>Developers, hours against '+cfg.target+'</h3><div class="devstrip">'+strip+'</div>'+(noteBits.length?'<p class="sub" style="margin-top:10px">Also in this sprint: '+noteBits.join(', ')+'.</p>':'')+'</div>'+
     '<div class="panel"><h3>Risks, '+risks.length+' open item'+(risks.length===1?'':'s')+' to look at</h3>'+(risks.length?'<div class="table-wrap" style="max-height:480px;overflow:auto"><table class="t"><thead><tr><th>Item</th><th>Owner</th><th>State</th><th>Why</th></tr></thead><tbody>'+
-      risks.map(r=>'<tr><td>'+itemLink(r.it)+'</td><td>'+(r.it.who?esc(r.it.who):'<span class="pill red">Unassigned</span>')+'</td><td>'+esc(r.it.state)+'</td><td>'+r.f.map(x=>'<span class="pill '+x[0]+'">'+esc(x[1])+'</span>').join(' ')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mute" style="margin:0">No Critical, P1, blocked or stuck items are open in this sprint.</p>')+'</div>';
+      risks.map(r=>'<tr><td>'+itemLink(r.it)+'</td><td>'+(r.it.who?esc(r.it.who):'<span class="pill red">Unassigned</span>')+'</td><td>'+esc(r.it.state)+'</td><td>'+r.f.map(x=>'<span class="pill '+x[0]+'">'+esc(x[1])+'</span>').join(' ')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mute" style="margin:0">No Critical, P1, blocked or stuck items are open in this sprint.</p>')+'</div>'+
+    reworkPanel(st);
 }
 
 async function show(force){
