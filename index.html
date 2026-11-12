@@ -179,6 +179,15 @@ table.t{border-collapse:collapse;width:100%}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;cursor:grab;box-shadow:0 1px 1px rgba(26,31,51,.05);min-width:0}
 .card.dragging{opacity:.4}
 .card.saving{opacity:.6;pointer-events:none}
+.card.rej{border:2px solid var(--red-fill);padding:8px 9px}
+.rwp{border-left:4px solid var(--red-fill)}
+.rwsel{align-items:center;gap:3px;flex-wrap:nowrap!important}.rwl{font-size:11px;color:var(--red);font-weight:600;margin-right:2px}
+.rwsel button{border:1px solid var(--red-fill);background:transparent;color:var(--red);border-radius:6px;padding:0 5px;font-size:11px;font-weight:600;line-height:1.6;cursor:pointer;white-space:nowrap}
+.rwsel button.on{background:var(--red-fill);color:#fff}
+.rwn{font-size:11px;color:var(--red)}
+.rwgrid{display:flex;flex-wrap:wrap;gap:6px 28px;align-items:baseline;margin:2px 0 8px}
+.rwgrid b{font-size:22px}
+.rwgrid small{font-size:12px;color:var(--mute);font-weight:400}
 .card .tt{display:block;font-weight:500;color:var(--ink);overflow-wrap:anywhere}
 .card .tt:hover{color:var(--accent)}
 .card .ln{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:7px;font-size:12px;color:var(--mute)}
@@ -376,6 +385,7 @@ legend{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--
         <label>Remaining work (hours)<input type="text" id="s_fRemaining" list="dlFields"></label>
         <label>State change date<input type="text" id="s_fStateChange" list="dlFields"></label>
         <label>Due date<input type="text" id="s_fDue" list="dlFields"></label>
+        <label>Test Rejected (true or false)<input type="text" id="s_fTestRejected" list="dlFields"></label>
       </div>
     </fieldset>
     <fieldset>
@@ -446,11 +456,14 @@ function mondayOf(d){const x=atMidnight(d),wd=(x.getDay()+6)%7;x.setDate(x.getDa
 
 /* ================= settings ================= */
 const KEY='sprintBoard.settings.v1',PATKEY='sprintBoard.pat',PHOTOKEY='sprintApp.photos.v1',MXKEY='sprintApp.matrix.v1',UIKEY='sprintApp.ui.v1';
+/* Rework hours for test rejected items: picked on the card (1, 3 or 5 h), kept in this browser only, never written to Azure DevOps. */
+const RWKEY='sprintApp.rework.v1',RW_OPTS=[1,3,5];
+const RW={get(id){const m=sget(RWKEY)||{};const v=m[id];return RW_OPTS.indexOf(v)>=0?v:null},set(id,h){const m=sget(RWKEY)||{};if(h==null)delete m[id];else m[id]=h;return sset(RWKEY,m)}};
 const DEFAULTS={
   org:'SolvemCon',project:'Solvem - SDLC',area:'Solvem - SDLC\\Development Team',iterFilter:'Dev',
   boardTypes:'Bug, Task',masterType:'Master Tracker',stageAnalysis:'Product Backlog Item',stageDev:'Bug, Task',stageQa:'Test Case',stageDeploy:'Deployment Task',
   blockedTag:'Blocked',
-  fClient:'',fSeverity:'Microsoft.VSTS.Common.Severity',fPriority:'Microsoft.VSTS.Common.Priority',
+  fClient:'',fTestRejected:'',fSeverity:'Microsoft.VSTS.Common.Severity',fPriority:'Microsoft.VSTS.Common.Priority',
   fOriginal:'Microsoft.VSTS.Scheduling.OriginalEstimate',fRemaining:'Microsoft.VSTS.Scheduling.RemainingWork',
   fStateChange:'Microsoft.VSTS.Common.StateChangeDate',fDue:'Microsoft.VSTS.Scheduling.DueDate',
   devs:'Aidan\nAli\nArmien\nJameel\nKevin\nKim\nMark\nMartin\nRussell\nSimamkele',
@@ -582,12 +595,12 @@ function guessSkill(it){
   return '';
 }
 
-window.SB={$,$$,esc,enc,clone,sget,sset,sdel,num,r1,hfmt,atMidnight,bizDays,workDays,fmtD,fmtDY,mondayOf,KEY,PATKEY,PHOTOKEY,MXKEY,cfg,DEFAULTS,list,parseDevs,parseCTypes,clientType,devOf,SIZES,sizeOf,sizeHours,S,saveUI,setStatus,toast,openPop,closePop,avatar,api,ApiError,setDemoBackend,getPat,esq,loadMatrix,saveMatrix,SKILLS,guessSkill,SEED,setDevs:()=>{DEVS=parseDevs()},devs:()=>DEVS};
+window.SB={RW,RW_OPTS,$,$$,esc,enc,clone,sget,sset,sdel,num,r1,hfmt,atMidnight,bizDays,workDays,fmtD,fmtDY,mondayOf,KEY,PATKEY,PHOTOKEY,MXKEY,cfg,DEFAULTS,list,parseDevs,parseCTypes,clientType,devOf,SIZES,sizeOf,sizeHours,S,saveUI,setStatus,toast,openPop,closePop,avatar,api,ApiError,setDemoBackend,getPat,esq,loadMatrix,saveMatrix,SKILLS,guessSkill,SEED,setDevs:()=>{DEVS=parseDevs()},devs:()=>DEVS};
 })();
 
 (function(){
 'use strict';
-const {$,esc,enc,num,atMidnight,bizDays,workDays,cfg,list,devOf,sizeOf,S,api,esq,fmtD,SIZES,sizeHours}=SB;
+const {RW,$,esc,enc,num,atMidnight,bizDays,workDays,cfg,list,devOf,sizeOf,S,api,esq,fmtD,SIZES,sizeHours}=SB;
 
 /* ================= core (fields, sprints, states) ================= */
 function pickField(cfgRef,names,prefer){
@@ -638,11 +651,13 @@ async function ensureCore(force){
       orig:pickField(cfg.fOriginal,['original estimate'],['Microsoft.VSTS.Scheduling.OriginalEstimate']),
       rem:pickField(cfg.fRemaining,['remaining work'],['Microsoft.VSTS.Scheduling.RemainingWork']),
       sc:pickField(cfg.fStateChange,['state change date'],['Microsoft.VSTS.Common.StateChangeDate']),
-      due:pickField(cfg.fDue,['due date','duedate'],['Microsoft.VSTS.Scheduling.DueDate'])
+      due:pickField(cfg.fDue,['due date','duedate'],['Microsoft.VSTS.Scheduling.DueDate']),
+      rej:pickField(cfg.fTestRejected,['test rejected','testrejected'],[])
     };
     [['client','Client'],['sev','Severity'],['pri','Priority'],['orig','Original estimate'],['rem','Remaining work'],['due','Due date']].forEach(p=>{
       if(!S.F[p[0]]||!S.fmeta[S.F[p[0]]])S.warns.push(p[1]+' field was not found in this project, so it is left blank. Set its reference name in Settings.');
     });
+    if(!S.F.rej||!S.fmeta[S.F.rej])S.warns.push('The Test Rejected field was not found in this project, so test rejected work is not shown. Set its reference name in Settings.');
     if(!S.iterations.length)await loadIterations();
     S.typeStates={};S.typeFields={};
     await Promise.all(allTypes().map(async t=>{
@@ -699,18 +714,23 @@ function normItem(w){
   const sevRaw=g(S.F.sev),cl=g(S.F.client);
   const pri=num(g(S.F.pri));
   const dueRaw=g(S.F.due);
+  const rejRaw=g(S.F.rej),rej=rejRaw===true||String(rejRaw).toLowerCase()==='true';
   const it={id:w.id,rev:w.rev,title:F['System.Title']||'',type,state,cat,who,dev,uq,iter:F['System.IterationPath']||'',
     pri,sev:sevRaw==null?'':String(sevRaw),client:cl==null?'':(typeof cl==='object'?(cl.displayName||''):String(cl)),
     orig,rem,tags,comments:num(F['System.CommentCount'])||0,sc:sc?new Date(sc):null,age:sc?bizDays(new Date(sc),new Date()):0,
-    due:dueRaw?new Date(dueRaw):null,
+    due:dueRaw?new Date(dueRaw):null,rej,
     url:'https://dev.azure.com/'+enc(cfg.org)+'/'+enc(cfg.project)+'/_workitems/edit/'+w.id};
   decorate(it);return it;
 }
 function decorate(it){
-  it.hours=it.orig>0?it.orig:(it.rem>0?it.rem:0);
-  it.size=sizeOf(it.hours);
+  /* hours0 is the item's own size; hours is what counts toward the sprint. Test rejected work is separate effort, so it counts as 0 here. */
+  it.hours0=it.orig>0?it.orig:(it.rem>0?it.rem:0);
+  it.size=sizeOf(it.hours0);
+  it.hours=it.rej?0:it.hours0;
   it.done=it.cat==='Completed';
   it.open=it.cat!=='Completed'&&it.cat!=='Removed';
+  it.rwHours=(it.rej&&it.open)?(RW.get(it.id)||0):0;
+  it.rwNone=!!(it.rej&&it.open&&!(it.rwHours>0));
   it.critical=/critical/i.test(it.sev)||/^\s*1\b/.test(it.sev);
   it.p1=it.pri===1;
   it.blocked=it.tags.some(t=>t.toLowerCase()===String(cfg.blockedTag).toLowerCase());
@@ -755,7 +775,7 @@ async function loadScope(ds){
     const cut=new Date(atMidnight(info.start).getTime()+86400000);
     const base=await wiqlIds(sprintWiql(ds.path,cut.toISOString()));
     const cur=new Set(ds.items.map(i=>i.id)),bs=new Set(base);
-    const joined=ds.items.filter(i=>!bs.has(i.id));
+    const joined=ds.items.filter(i=>!bs.has(i.id)&&!i.rej);
     const goneIds=base.filter(id=>!cur.has(id));
     const gone=goneIds.length?await fetchItems(goneIds):[];
     ds.scope={na:false,joined,gone,baseIds:base,cut};
@@ -775,27 +795,32 @@ async function loadBurn(ds){
     const days=workDays(info.start,info.finish);
     const now=new Date(),types=new Set(list(cfg.boardTypes));
     const remOf=(type,state,rem,orig)=>{const c=catOf(type,state);if(c==='Completed'||c==='Removed')return 0;return rem!=null?rem:(orig||0)};
-    const fields=['System.IterationPath','System.State','System.WorkItemType'].concat([S.F.rem,S.F.orig].filter(Boolean));
+    const fields=['System.IterationPath','System.State','System.WorkItemType'].concat([S.F.rem,S.F.orig,S.F.rej].filter(Boolean));
+    const rejOf=F=>!!S.F.rej&&(F[S.F.rej]===true||String(F[S.F.rej]).toLowerCase()==='true');
     const pts=await Promise.all(days.map(async d=>{
       const endOfDay=new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59);
       if(d>atMidnight(now))return null;
       if(atMidnight(d).getTime()===atMidnight(now).getTime()){
-        return ds.items.reduce((s,i)=>s+(i.cat==='Completed'||i.cat==='Removed'?0:(i.rem!=null?i.rem:(i.orig||0))),0);
+        let m0=0;const r0=[];
+        ds.items.forEach(i=>{const v=(i.cat==='Completed'||i.cat==='Removed'?0:(i.rem!=null?i.rem:(i.orig||0)));if(i.rej){if(i.open)r0.push(i.id)}else m0+=v});
+        return {m:m0,r:r0};
       }
-      let sum=0;
+      let sum=0;const rsum=[];
       for(let k=0;k<ids.length;k+=150){
         const chunk=ids.slice(k,k+150);
         const r=await api('wit/workitems?ids='+chunk.join(',')+'&fields='+fields.map(enc).join(',')+'&asOf='+enc(endOfDay.toISOString())+'&errorPolicy=omit&api-version=7.1');
         (r.value||[]).forEach(w=>{
           if(!w)return;const F=w.fields;
           if(F['System.IterationPath']!==ds.path||!types.has(F['System.WorkItemType']))return;
-          sum+=remOf(F['System.WorkItemType'],F['System.State'],num(F[S.F.rem]),num(F[S.F.orig]));
+          const v=remOf(F['System.WorkItemType'],F['System.State'],num(F[S.F.rem]),num(F[S.F.orig]));
+          if(rejOf(F)){if(catOf(F['System.WorkItemType'],F['System.State'])!=='Completed'&&catOf(F['System.WorkItemType'],F['System.State'])!=='Removed')rsum.push(w.id)}else sum+=v;
         });
       }
-      return sum;
+      return {m:sum,r:rsum};
     }));
-    const base=pts.find(p=>p!=null)||0,n=days.length;
-    ds.burn={na:false,days,pts,base,ideal:days.map((d,i)=>n>1?base*(1-i/(n-1)):0)};
+    const mainPts=pts.map(p=>p?p.m:null),rwIds=pts.map(p=>p?p.r:null);
+    const base=mainPts.find(p=>p!=null)||0,n=days.length;
+    ds.burn={na:false,days,pts:mainPts,rwIds,hasRw:!!S.F.rej&&rwIds.some(a=>a&&a.length>0),base,ideal:days.map((d,i)=>n>1?base*(1-i/(n-1)):0)};
   }catch(e){ds.burn={na:true,err:e.message}}
   return ds.burn;
 }
@@ -951,7 +976,7 @@ SB.data={patchItem,op,ensureCore,loadIterations,currentIter,loadSprint,loadScope
 
 (function(){
 'use strict';
-const {$,esc,cfg,r1,hfmt,atMidnight,workDays,fmtD,fmtDY,S,avatar}=SB;
+const {RW,$,esc,cfg,r1,hfmt,atMidnight,workDays,fmtD,fmtDY,S,avatar}=SB;
 const D=SB.data;
 let tok=0;
 
@@ -990,13 +1015,15 @@ function stats(ds){
   const items=ds.items.filter(i=>i.cat!=='Removed');
   const dev=SB.devs().map(d=>{
     const mine=items.filter(i=>i.dev===d.name);
-    return {name:d.name,hours:mine.reduce((s,i)=>s+i.hours,0),open:mine.filter(i=>i.open).length,noEff:mine.filter(i=>!(i.hours>0)).length,crit:mine.filter(i=>i.open&&(i.critical||i.p1)).length,n:mine.length};
+    return {name:d.name,hours:mine.reduce((s,i)=>s+i.hours,0),open:mine.filter(i=>i.open).length,noEff:mine.filter(i=>!i.rej&&!(i.hours>0)).length,crit:mine.filter(i=>i.open&&(i.critical||i.p1)).length,n:mine.length,
+      rw:mine.filter(i=>i.rej&&i.open).length,rwH:mine.reduce((s,i)=>s+i.rwHours,0)};
   });
-  const noEff=items.filter(i=>!(i.hours>0)).length;
+  const noEff=items.filter(i=>!i.rej&&!(i.hours>0)).length;
   const crit=items.filter(i=>i.open&&i.critical);
   return {items,total:items.length,done:items.filter(i=>i.done),open:items.filter(i=>i.open),
     committed:items.reduce((s,i)=>s+i.hours,0),doneH:items.filter(i=>i.done).reduce((s,i)=>s+i.hours,0),
     noEff,noEffPct:items.length?100*noEff/items.length:0,crit,dev,
+    rwOpen:items.filter(i=>i.rej&&i.open),rwFixed:items.filter(i=>i.rej&&i.done),rwH:items.reduce((s,i)=>s+i.rwHours,0),
     other:items.filter(i=>i.dev===''&&i.who!=='').length,unassigned:items.filter(i=>i.who==='').length};
 }
 function healthOf(st){
@@ -1020,7 +1047,8 @@ function healthOf(st){
 function burnSvg(b){
   if(!b||b.na)return '<p class="mute" style="margin:0">'+(b&&b.err?'History could not be read: '+esc(b.err):'Burndown starts once the sprint has begun.')+'</p>';
   const W=560,H=230,L=40,R=16,T=14,B=34,pw=W-L-R,ph=H-T-B,n=b.days.length;
-  const vals=b.pts.filter(v=>v!=null).concat(b.ideal);
+  const rwv=b.hasRw?b.rwIds.map(a=>a?a.reduce((s,id)=>s+(RW.get(id)||0),0):null):[];
+  const vals=b.pts.filter(v=>v!=null).concat(b.ideal).concat(rwv.filter(v=>v!=null));
   const max=Math.max(10,Math.ceil(Math.max.apply(null,vals)/10)*10);
   const x=i=>L+(n>1?pw*i/(n-1):pw/2),y=v=>T+ph-ph*v/max;
   let g='';
@@ -1032,11 +1060,20 @@ function burnSvg(b){
   const area=real.length>1?line+' L'+real[real.length-1][0]+' '+y(0)+' L'+real[0][0]+' '+y(0)+' Z':'';
   const dots=real.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i===real.length-1?5:3)+'" style="fill:var(--accent)"/>').join('');
   const end=real.length?'<text class="ink" x="'+Math.min(real[real.length-1][0],W-R-4)+'" y="'+(real[real.length-1][1]-10)+'" text-anchor="end" style="font-weight:600">'+Math.round(real[real.length-1][2])+' h</text>':'';
-  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Burndown: hours remaining each working day against the ideal line">'+g+lab+
+  let rwSvg='',rwLeg='';
+  if(b.hasRw){
+    const rr=[];rwv.forEach((v,i)=>{if(v!=null)rr.push([x(i),y(v),v])});
+    const rl=rr.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+    const rd=rr.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i===rr.length-1?5:3)+'" style="fill:var(--red-fill)"/>').join('');
+    const last=rr[rr.length-1];
+    rwSvg='<path d="'+rl+'" fill="none" style="stroke:var(--red-fill)" stroke-width="2.5"/>'+rd+(last?'<text x="'+Math.min(last[0],W-R-4)+'" y="'+(last[1]-10)+'" text-anchor="end" style="font-weight:600;fill:var(--red)">'+Math.round(last[2])+' h rework</text>':'');
+    rwLeg='<span><i class="dot" style="background:var(--red-fill)"></i>Rework hours remaining (test rejected, hours you picked on the cards)</span>';
+  }
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Burndown: hours remaining each working day against the ideal line'+(b.hasRw?', with test rejected rework hours in red':'')+'">'+g+lab+
     (area?'<path d="'+area+'" style="fill:var(--accent);opacity:.12"/>':'')+
     '<path d="'+ideal+'" fill="none" style="stroke:var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>'+
-    '<path d="'+line+'" fill="none" style="stroke:var(--accent)" stroke-width="2.5"/>'+dots+end+'</svg>'+
-    '<div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--accent)"></i>Hours remaining</span><span><i class="dot" style="background:var(--mute)"></i>Ideal</span></div>';
+    '<path d="'+line+'" fill="none" style="stroke:var(--accent)" stroke-width="2.5"/>'+dots+end+rwSvg+'</svg>'+
+    '<div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--accent)"></i>Hours remaining (planned work)</span><span><i class="dot" style="background:var(--mute)"></i>Ideal</span>'+rwLeg+'</div>';
 }
 const CATCOL={Proposed:'var(--grey-fill)',InProgress:'var(--open)',Resolved:'var(--amber-fill)',Completed:'var(--green-fill)'};
 function stateBar(st){
@@ -1055,6 +1092,14 @@ function sizeBar(st){
   const seg=ks.map(k=>({k,n:cnt[k],st:'background:var(--accent);opacity:'+op[k]})).concat([{k:'No size',n:cnt.none,st:'background:var(--red-fill)'}]);
   return '<div class="seg" role="img" aria-label="Items by shirt size">'+seg.map(r=>'<i style="width:'+(100*r.n/tot)+'%;'+r.st+'" title="'+r.k+': '+r.n+'"></i>').join('')+'</div>'+
     '<div class="legend">'+seg.map(r=>'<span><i class="dot" style="'+r.st+'"></i>'+r.k+' <b class="num">'+r.n+'</b></span>').join('')+'</div>'+(cnt.XL?'<p class="sub" style="margin:8px 0 0">'+cnt.XL+' XL item'+(cnt.XL===1?'':'s')+' should be split into smaller items.</p>':'');
+}
+function reworkPanel(st){
+  if(!S.F.rej)return '';
+  const open=st.rwOpen.slice().sort((a,b)=>b.age-a.age),none=open.filter(i=>i.rwNone).length;
+  const rows=open.map(i=>'<tr><td>'+itemLink(i)+'</td><td>'+(i.who?esc(i.who):'<span class="pill red">Unassigned</span>')+'</td><td>'+esc(i.state)+'</td><td class="num">'+(i.rwNone?'<span class="pill red">Pick 1, 3 or 5 h on the board</span>':'<b style="color:var(--red)">'+r1(i.rwHours)+' h</b>')+'</td></tr>').join('');
+  return '<div class="panel rwp" style="margin-bottom:14px"><h3>Test rejected rework</h3><div class="rwgrid"><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+open.length+'</b> <small>open</small></div><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+r1(st.rwH)+' h</b> <small>rework remaining</small></div><div><b class="num">'+st.rwFixed.length+'</b> <small>fixed and done</small></div>'+(none?'<div><b class="num" style="color:var(--red)">'+none+'</b> <small>still to be picked</small></div>':'')+'</div>'+
+    '<p class="sub" style="margin:0 0 8px">Returned by QA or the client. Tracked as separate effort: not counted in hours committed, scope change, completed work or sprint health. Rework hours (1, 3 or 5) are picked on the board card and kept in this browser only; nothing is written to Azure DevOps.</p>'+
+    (open.length?'<div class="table-wrap"><table class="t"><thead><tr><th>Item</th><th>Owner</th><th>State</th><th>Rework</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="mute" style="margin:0">No test rejected items are open in this sprint.</p>')+'</div>';
 }
 /* ---------- render ---------- */
 function render(ds){
@@ -1080,6 +1125,7 @@ function render(ds){
   st.items.filter(i=>i.open).forEach(i=>{
     if(i.critical)add(i,'red','Critical');
     if(i.p1)add(i,'amber','P1');
+    if(i.rej)add(i,'red','Test rejected');
     if(i.blocked)add(i,'red','Blocked');
     if(i.waitDev){const s2=SB.dep.status(i),w2=SB.dep.waitDays(i);add(i,s2==='overdue'?'red':'amber','Waiting on '+i.waitDev+(w2!=null?' '+w2+' d':''))}
     if((i.cat==='InProgress'||i.cat==='Resolved')&&i.age>cfg.stuck)add(i,'amber','Stuck '+i.age+' d in '+i.state);
@@ -1102,7 +1148,8 @@ function render(ds){
       '<div class="meter '+cls+'"><i style="width:'+Math.min(100,100*d.hours/cap)+'%"></i><span class="mk" style="left:'+(100*cfg.target/cap)+'%"></span></div>'+
       '<div class="kv"><span>Open items</span><b class="num">'+d.open+'</b></div>'+
       '<div class="kv"><span>No effort set</span><b class="num '+(d.noEff?'red':'')+'">'+d.noEff+'</b></div>'+
-      '<div class="kv"><span>Critical or P1 open</span><b class="num '+(d.crit?'red':'')+'">'+d.crit+'</b></div></button>';
+      '<div class="kv"><span>Critical or P1 open</span><b class="num '+(d.crit?'red':'')+'">'+d.crit+'</b></div>'+
+      (S.F.rej?'<div class="kv"><span>Test rejected (rework)</span><b class="num '+(d.rw?'red':'')+'">'+(d.rw?d.rw+' · '+r1(d.rwH)+' h':'0')+'</b></div>':'')+'</button>';
   }).join('');
   const noteBits=[];if(st.unassigned)noteBits.push(st.unassigned+' unassigned');if(st.other)noteBits.push(st.other+' with people outside the developer list');
   const okHdr=finished?'Health at close':'Sprint health';
@@ -1113,6 +1160,7 @@ function render(ds){
       '<div class="panel"><h3>Scope change</h3>'+scopeHtml+'</div>'+
       '<div class="panel"><h3>Effort</h3><div class="big num">'+st.noEff+' <small>item'+(st.noEff===1?'':'s')+' with no effort</small></div><div class="sub num">'+Math.round(st.noEffPct)+'% of '+st.total+' items</div><div class="meter '+(st.noEffPct>20?'red':st.noEffPct>10?'amber':'green')+'"><i style="width:'+Math.min(100,st.noEffPct)+'%"></i></div></div>'+
     '</div>'+
+    reworkPanel(st)+
     '<div class="grid g2"><div class="panel"><h3>Burndown, hours remaining</h3>'+(ds.burn?burnSvg(ds.burn):'<p class="mute" style="margin:0">Reading history…</p>')+'</div>'+
     '<div class="panel"><h3>Items by state</h3>'+stateBar(st)+'<h3 style="margin-top:18px">Shirt sizes</h3>'+sizeBar(st)+'</div></div>'+
     '<div class="panel" style="margin-bottom:14px"><h3>Developers, hours against '+cfg.target+'</h3><div class="devstrip">'+strip+'</div>'+(noteBits.length?'<p class="sub" style="margin-top:10px">Also in this sprint: '+noteBits.join(', ')+'.</p>':'')+'</div>'+
@@ -1387,7 +1435,7 @@ SB.dep={btn,othersBtn,status,waitDays,waitersOf,loadAll,open,bind,onChange:null,
 
 (function(){
 'use strict';
-const {$,$$,esc,cfg,r1,mondayOf,atMidnight,fmtD,S,avatar,SIZES,toast,openPop}=SB;
+const {RW,RW_OPTS,$,$$,esc,cfg,r1,mondayOf,atMidnight,fmtD,S,avatar,SIZES,toast,openPop}=SB;
 const D=SB.data,O=SB.ov;
 let tok=0;
 const cur={ds:null,dev:'',lanes:[]};
@@ -1430,12 +1478,12 @@ function sevPill(it){
 }
 function card(it){
   const stuck=(it.cat==='InProgress'||it.cat==='Resolved')&&it.age>cfg.stuck;
-  const size=it.size?'<button type="button" class="size '+it.size+'" data-act="size" title="'+(it.size==='XL'?'XL: split this into smaller items. ':'')+r1(it.hours)+' h in Azure DevOps. Click to change the size.">'+it.size+'</button>':'<button type="button" class="size none" data-act="size" title="No effort set. Click to pick a size.">No size</button>';
-  return '<div class="card'+(it._to?' saving':'')+'" draggable="true" data-id="'+it.id+'">'+
+  const size=it.size?'<button type="button" class="size '+it.size+'" data-act="size" title="'+(it.size==='XL'?'XL: split this into smaller items. ':'')+r1(it.hours0)+' h in Azure DevOps. Click to change the size.">'+it.size+'</button>':'<button type="button" class="size none" data-act="size" title="No effort set. Click to pick a size.">No size</button>';
+  return '<div class="card'+(it.rej?' rej':'')+(it._to?' saving':'')+'" draggable="true" data-id="'+it.id+'">'+
     '<div class="ln first"><span class="lg1">'+SB.dep.btn(it)+SB.dep.othersBtn(it,cur.ds)+'<span class="tp">'+esc(it.type)+' '+it.id+'</span></span><button type="button" class="mvb" data-act="move" aria-label="Move this item to another state" title="Move to another state">⋯</button></div>'+
     '<a class="tt" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.title||('Work item '+it.id))+'</a>'+
-    '<div class="ln">'+(it.client?'<span class="pill accent">'+esc(it.client)+'</span>':'<span class="pill">No client</span>')+sevPill(it)+(it.pri!=null?'<span class="pill '+(it.p1?'amber':'')+'">P'+it.pri+'</span>':'')+(it.blocked?'<span class="pill red">Blocked</span>':'')+'</div>'+
-    '<div class="ln">'+size+'<span class="mono" style="'+(stuck?'color:var(--amber)':'')+'">'+it.age+' d in '+esc(it.state)+'</span></div></div>';
+    '<div class="ln">'+(it.client?'<span class="pill accent">'+esc(it.client)+'</span>':'<span class="pill">No client</span>')+sevPill(it)+(it.pri!=null?'<span class="pill '+(it.p1?'amber':'')+'">P'+it.pri+'</span>':'')+(it.blocked?'<span class="pill red">Blocked</span>':'')+(it.rej?'<span class="pill red" title="Returned by QA or the client. Tracked as separate effort.">Test rejected</span>':'')+'</div>'+
+    '<div class="ln">'+size+'<span class="mono" style="'+(stuck?'color:var(--amber)':'')+'">'+it.age+' d in '+esc(it.state)+'</span></div>'+(it.rej&&it.open?'<div class="ln rwsel" role="group" aria-label="Rework hours"><span class="rwl">Rework</span>'+RW_OPTS.map(h=>'<button type="button" data-act="rw" data-h="'+h+'" class="'+(it.rwHours===h?'on':'')+'" aria-pressed="'+(it.rwHours===h)+'" title="Rework hours. Kept in this browser only, not written to Azure DevOps.">'+h+' h</button>').join('')+(it.rwNone?'<span class="rwn" title="Pick 1, 3 or 5 hours">?</span>':'')+'</div>':'')+'</div>';
 }
 function render(){
   const ds=cur.ds;if(!ds)return;
@@ -1445,7 +1493,8 @@ function render(){
   const lanes=D.lanesFor(SB.list(cfg.boardTypes));
   mine.forEach(i=>{if(!D.laneOf(i,lanes))lanes.push({key:i.state,label:i.state,cat:i.cat,rank:1,i:99,types:[i.type]})});
   cur.lanes=lanes;
-  const hours=mine.reduce((s,i)=>s+i.hours,0),noEff=mine.filter(i=>!(i.hours>0)).length;
+  const hours=mine.reduce((s,i)=>s+i.hours,0),noEff=mine.filter(i=>!i.rej&&!(i.hours>0)).length;
+  const rw=mine.filter(i=>i.rej&&i.open),rwH=rw.reduce((s,i)=>s+i.rwHours,0);
   const wk=mondayOf(info&&info.finish<now?info.finish:now);
   const doneWk=mine.filter(i=>i.done&&i.sc&&i.sc>=wk);
   const crit=mine.filter(i=>i.open&&(i.critical||i.p1)).length;
@@ -1459,6 +1508,7 @@ function render(){
   const stats='<div class="stats">'+
     '<div class="stat '+hc+'"><b class="num">'+r1(hours)+' / '+cfg.target+' h</b><span>Hours committed</span><div class="meter '+hc+'"><i style="width:'+Math.min(100,100*hours/cap)+'%"></i><span class="mk" style="left:'+(100*cfg.target/cap)+'%"></span></div></div>'+
     '<div class="stat '+(noEff?'red':'')+'"><b class="num">'+noEff+'</b><span>Items with no effort</span></div>'+
+    (S.F.rej?'<div class="stat '+(rw.length?'red':'')+'" title="Returned by QA or the client. Separate effort, not counted in hours committed."><b class="num">'+rw.length+(rw.length?' · '+r1(rwH)+' h':'')+'</b><span>Test rejected rework (not in committed)</span></div>':'')+
     '<div class="stat"><b class="num">'+doneWk.length+'</b><span>Done this week ('+r1(doneWk.reduce((s,i)=>s+i.hours,0))+' h)</span></div>'+
     '<div class="stat '+(crit?'red':'')+'"><b class="num">'+crit+'</b><span>Critical or P1 open</span></div>'+
     '<div class="stat '+(overdue?'red':(dueToday?'amber':''))+'"><b class="num">'+dueToday+' / '+overdue+'</b><span>Due today / overdue</span></div>'+
@@ -1467,7 +1517,7 @@ function render(){
   const head='<div class="devhead"><div class="who">'+avatar(cur.dev,'lg')+'<div><h2>'+esc(cur.dev)+'</h2><div class="sub">'+mine.length+(mine.length===1?' bug or task':' bugs and tasks')+(info?' · '+esc(info.name):'')+'</div><button class="btn sm" type="button" data-act="photo" style="margin-top:4px">Change photo</button></div></div>'+stats+'</div>';
   const cols=lanes.map(l=>{
     const its=mine.filter(i=>{const lk=i._to||(D.laneOf(i,lanes)||{}).key;return lk===l.key});
-    its.sort((a,b)=>l.cat==='Completed'?((b.sc||0)-(a.sc||0)):((b.critical-a.critical)||((a.pri||9)-(b.pri||9))||b.age-a.age));
+    its.sort((a,b)=>l.cat==='Completed'?((b.sc||0)-(a.sc||0)):(((b.rej?1:0)-(a.rej?1:0))||(b.critical-a.critical)||((a.pri||9)-(b.pri||9))||b.age-a.age));
     return '<div class="lane c-'+l.cat+'" data-lane="'+esc(l.key)+'"><div class="lh"><b>'+esc(l.label)+'</b><span class="ct num">'+its.length+'</span></div><div class="cards">'+its.map(card).join('')+'</div></div>';
   }).join('');
   $('#bdBody').innerHTML=head+(mine.length?'':'<div class="banner">Nothing is assigned to '+esc(cur.dev)+' in this sprint.</div>')+'<div class="kan" id="kan">'+cols+'</div>';
@@ -1504,6 +1554,7 @@ function bind(){
     const a=act.getAttribute('data-act');
     if(a==='photo'){SB.pickPhoto(cur.dev);return}
     const c=act.closest('.card');const it=c&&findItem(c.getAttribute('data-id'));if(!it)return;
+    if(a==='rw'){const h=Number(act.getAttribute('data-h'));RW.set(it.id,RW.get(it.id)===h?null:h);D.decorate(it);render();return}
     if(a==='size'){
       openPop(act,'Set size for this item',SIZES.map(s=>({v:s.k,label:s.k+'  ·  '+s.label,note:s.h+' h'})),k=>doSize(it,k),
         it.cat==='Proposed'?'Writes Original Estimate and Remaining Work.':'Writes Original Estimate only. Remaining Work stays as it is.');
@@ -1787,8 +1838,8 @@ const STATES={
   'Test Case':[['Design','Proposed'],['Ready','InProgress'],['Closed','Completed']],
   'Deployment Task':[['To Do','Proposed'],['In Progress','InProgress'],['Done','Completed']]
 };
-const REF={orig:'Microsoft.VSTS.Scheduling.OriginalEstimate',rem:'Microsoft.VSTS.Scheduling.RemainingWork',sc:'Microsoft.VSTS.Common.StateChangeDate',due:'Microsoft.VSTS.Scheduling.DueDate',sev:'Microsoft.VSTS.Common.Severity',pri:'Microsoft.VSTS.Common.Priority',cl:'Custom.Client'};
-const FIELDS=[['System.Title','Title','string'],['System.State','State','string'],['System.AssignedTo','Assigned To','identity'],['System.Tags','Tags','plainText'],['System.IterationPath','Iteration Path','treePath'],[REF.orig,'Original Estimate','double'],[REF.rem,'Remaining Work','double'],[REF.sc,'State Change Date','dateTime'],[REF.due,'Due Date','dateTime'],[REF.sev,'Severity','string'],[REF.pri,'Priority','integer'],[REF.cl,'Client','string']];
+const REF={orig:'Microsoft.VSTS.Scheduling.OriginalEstimate',rem:'Microsoft.VSTS.Scheduling.RemainingWork',sc:'Microsoft.VSTS.Common.StateChangeDate',due:'Microsoft.VSTS.Scheduling.DueDate',sev:'Microsoft.VSTS.Common.Severity',pri:'Microsoft.VSTS.Common.Priority',cl:'Custom.Client',rej:'Custom.TestRejected'};
+const FIELDS=[['System.Title','Title','string'],['System.State','State','string'],['System.AssignedTo','Assigned To','identity'],['System.Tags','Tags','plainText'],['System.IterationPath','Iteration Path','treePath'],[REF.orig,'Original Estimate','double'],[REF.rem,'Remaining Work','double'],[REF.sc,'State Change Date','dateTime'],[REF.due,'Due Date','dateTime'],[REF.sev,'Severity','string'],[REF.pri,'Priority','integer'],[REF.cl,'Client','string'],[REF.rej,'Test Rejected','boolean']];
 function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const MON=(()=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d})();
 const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
@@ -1842,6 +1893,13 @@ function genSprint(it){
     mk('TMT'+TMTPOOL[7]+' Payment batch rejected by the bank file','Bitou','1 - Critical',8);
   }
   if(key===0){
+    /* demo: items QA or the client sent back (finished early in the week, then returned) */
+    const all=ids.map(id=>store.items[id]),lim=Math.max(0,now);
+    const mkRej=(o,day)=>{if(!o)return;o.doneDay=0;o.startDay=0;o.rejDay=Math.min(day,lim)};
+    [['Kevin',2],['Kevin',3],['Ali',1],['Russell',3]].forEach(p=>mkRej(all.find(o=>o.dev===p[0]&&o.orig&&o.rejDay==null&&o.type==='Task'),p[1]));
+    mkRej(all.find(o=>o.dev&&o.dev!=='Visitor'&&!o.orig&&o.rejDay==null),2);
+  }
+  if(key===0){
     const mine=n=>ids.map(id=>store.items[id]).filter(o=>o.dev===n&&o.type!=='x');
     const k=mine('Kevin'),a=mine('Ali'),ago=days=>new Date(Date.now()-days*86400000).toISOString();
     const iso=d=>d.toISOString().slice(0,10),plus=n=>iso(new Date(Date.now()+n*86400000));
@@ -1857,6 +1915,7 @@ function itemState(o,idx){
   if(idx==null&&o.stateOverride)return o.stateOverride;
   const i=idx==null?dayIdxNow(o.it):idx;
   const names=o.type==='Bug'?['New','Active','Resolved','Closed']:['To Do','In Progress','Done'];
+  if(o.rejDay!=null&&i>=o.rejDay)return names[1];
   if(o.doneDay!=null&&o.doneDay<=i)return names[names.length-1];
   if(i>=0&&o.startDay<=i)return names[1];
   return names[0];
@@ -1879,6 +1938,7 @@ function toWI(o,fields,asOfIdx){
     'System.ChangedDate':new Date().toISOString(),'System.IterationPath':inSprint?o.iter:'Solvem - SDLC\\Unallocated Pool',
     [REF.orig]:asOfIdx==null?origNow:o.orig,[REF.rem]:remAt(o,asOfIdx),[REF.sev]:o.sev,[REF.pri]:o.pri,[REF.cl]:o.client||undefined,
     [REF.due]:o.due?o.due.toISOString():undefined,
+    [REF.rej]:(o.rejDay!=null&&(asOfIdx==null||asOfIdx>=o.rejDay))?true:undefined,
     [REF.sc]:(o.scOverride||addD(o.it.start,o.doneDay!=null?o.doneDay:(o.startDay<9?o.startDay:0))).toISOString()
   };
   (fields||Object.keys(all)).forEach(k=>{if(all[k]!==undefined)F[k]=all[k]});
@@ -2046,7 +2106,7 @@ function setDemo(on){
 }
 
 /* ---------- settings ---------- */
-const MAP=['org','project','area','iterFilter','boardTypes','masterType','stageAnalysis','stageDev','stageQa','stageDeploy','blockedTag','fClient','fSeverity','fPriority','fOriginal','fRemaining','fStateChange','fDue','devs','ctypes','target','low','stuck'];
+const MAP=['org','project','area','iterFilter','boardTypes','masterType','stageAnalysis','stageDev','stageQa','stageDeploy','blockedTag','fClient','fSeverity','fPriority','fOriginal','fRemaining','fStateChange','fDue','fTestRejected','devs','ctypes','target','low','stuck'];
 const NUMS={target:1,low:1,stuck:1};
 function openSettings(){
   MAP.forEach(k=>{$('#s_'+k).value=cfg[k]==null?'':cfg[k]});
@@ -2055,7 +2115,7 @@ function openSettings(){
   $('#dlgSettings').showModal();
 }
 function saveSettings(){
-  const scope=[cfg.org,cfg.project,cfg.area,cfg.iterFilter,cfg.boardTypes,cfg.masterType,cfg.stageAnalysis,cfg.stageDev,cfg.stageQa,cfg.stageDeploy,cfg.fClient,cfg.fSeverity,cfg.fPriority,cfg.fOriginal,cfg.fRemaining,cfg.fStateChange,cfg.fDue].join('|');
+  const scope=[cfg.org,cfg.project,cfg.area,cfg.iterFilter,cfg.boardTypes,cfg.masterType,cfg.stageAnalysis,cfg.stageDev,cfg.stageQa,cfg.stageDeploy,cfg.fClient,cfg.fSeverity,cfg.fPriority,cfg.fOriginal,cfg.fRemaining,cfg.fStateChange,cfg.fDue,cfg.fTestRejected].join('|');
   MAP.forEach(k=>{
     const v=$('#s_'+k).value.trim();
     if(NUMS[k]){const n=Number(v);cfg[k]=(v!==''&&isFinite(n)&&n>0)?n:DEFAULTS[k]}else cfg[k]=v;
@@ -2067,7 +2127,7 @@ function saveSettings(){
   const pat=$('#s_pat').value.trim();
   sdel(PATKEY,sessionStorage);sdel(PATKEY,localStorage);
   if(pat)sset(PATKEY,pat,$('#s_remember').checked?localStorage:sessionStorage);
-  const scope2=[cfg.org,cfg.project,cfg.area,cfg.iterFilter,cfg.boardTypes,cfg.masterType,cfg.stageAnalysis,cfg.stageDev,cfg.stageQa,cfg.stageDeploy,cfg.fClient,cfg.fSeverity,cfg.fPriority,cfg.fOriginal,cfg.fRemaining,cfg.fStateChange,cfg.fDue].join('|');
+  const scope2=[cfg.org,cfg.project,cfg.area,cfg.iterFilter,cfg.boardTypes,cfg.masterType,cfg.stageAnalysis,cfg.stageDev,cfg.stageQa,cfg.stageDeploy,cfg.fClient,cfg.fSeverity,cfg.fPriority,cfg.fOriginal,cfg.fRemaining,cfg.fStateChange,cfg.fDue,cfg.fTestRejected].join('|');
   reloadAll();SB.bd.fillDevSelect();
   nav(S.view,null,true);
 }

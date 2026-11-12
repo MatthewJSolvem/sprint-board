@@ -12,6 +12,13 @@ The token stays in the browser (session storage, or local storage if you tick "R
 - Picking a size writes Original Estimate (S 2, M 5, L 14, XL 24 hours). If the item is not in a Proposed state, only Original Estimate is written; otherwise Remaining Work is written too.
 - Assign on the Skills screen writes `System.AssignedTo`.
 
+## Test rejected rework
+Bugs and tasks have a boolean field called **Test Rejected**. When it is true, QA or the client returned the item because of a developer fault. The board finds the field by its display name "Test Rejected" (override it in Settings under Fields; a warning shows if it is not found).
+- Kanban: the card has a red border, a "Test rejected" tag and a **Rework 1 h / 3 h / 5 h** picker. Rejected cards sort to the top of each lane.
+- Burndown: the blue line is planned work without rejected items. A red line shows the rework hours you picked for open rejected items.
+- Rework is separate effort. It is not counted in hours committed, completed work, scope change or sprint health.
+- The 1 / 3 / 5 h picks are kept in the browser only (local storage). **Nothing is written to Azure DevOps for them.** Other people and other browsers do not see them.
+
 ## Notes and dependencies on cards
 Each Kanban card has an icon: grey = has a note, amber = waiting on another developer, red = overdue (waiting longer than the stuck days, promised date passed, or the linked item is blocked), green = dependency cleared. The developer being waited on sees an "others are waiting" icon on the linked card.
 Everything is stored in Azure DevOps so it is visible there too:
