@@ -723,10 +723,10 @@ function normItem(w){
   decorate(it);return it;
 }
 function decorate(it){
-  /* hours0 is the item's own size; hours is what counts toward the sprint. Test rejected work is separate effort, so it counts as 0 here. */
+  /* hours is the item's own size (shirt size) and always counts toward the developer's committed hours, rejected or not. Rework hours (the 1, 3 or 5 h picker) are separate and only feed the burndown chart. */
   it.hours0=it.orig>0?it.orig:(it.rem>0?it.rem:0);
   it.size=sizeOf(it.hours0);
-  it.hours=it.rej?0:it.hours0;
+  it.hours=it.hours0;
   it.done=it.cat==='Completed';
   it.open=it.cat!=='Completed'&&it.cat!=='Removed';
   it.rwHours=(it.rej&&it.open)?(RW.get(it.id)||0):0;
@@ -1015,10 +1015,10 @@ function stats(ds){
   const items=ds.items.filter(i=>i.cat!=='Removed');
   const dev=SB.devs().map(d=>{
     const mine=items.filter(i=>i.dev===d.name);
-    return {name:d.name,hours:mine.reduce((s,i)=>s+i.hours,0),open:mine.filter(i=>i.open).length,noEff:mine.filter(i=>!i.rej&&!(i.hours>0)).length,crit:mine.filter(i=>i.open&&(i.critical||i.p1)).length,n:mine.length,
+    return {name:d.name,hours:mine.reduce((s,i)=>s+i.hours,0),open:mine.filter(i=>i.open).length,noEff:mine.filter(i=>!(i.hours>0)).length,crit:mine.filter(i=>i.open&&(i.critical||i.p1)).length,n:mine.length,
       rw:mine.filter(i=>i.rej&&i.open).length,rwH:mine.reduce((s,i)=>s+i.rwHours,0)};
   });
-  const noEff=items.filter(i=>!i.rej&&!(i.hours>0)).length;
+  const noEff=items.filter(i=>!(i.hours>0)).length;
   const crit=items.filter(i=>i.open&&i.critical);
   return {items,total:items.length,done:items.filter(i=>i.done),open:items.filter(i=>i.open),
     committed:items.reduce((s,i)=>s+i.hours,0),doneH:items.filter(i=>i.done).reduce((s,i)=>s+i.hours,0),
@@ -1098,7 +1098,7 @@ function reworkPanel(st){
   const open=st.rwOpen.slice().sort((a,b)=>b.age-a.age),none=open.filter(i=>i.rwNone).length;
   const rows=open.map(i=>'<tr><td>'+itemLink(i)+'</td><td>'+(i.who?esc(i.who):'<span class="pill red">Unassigned</span>')+'</td><td>'+esc(i.state)+'</td><td class="num">'+(i.rwNone?'<span class="pill red">Pick 1, 3 or 5 h on the board</span>':'<b style="color:var(--red)">'+r1(i.rwHours)+' h</b>')+'</td></tr>').join('');
   return '<div class="panel rwp" style="margin-top:14px"><h3>Test rejected rework</h3><div class="rwgrid"><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+open.length+'</b> <small>open</small></div><div><b class="num" style="color:'+(open.length?'var(--red)':'inherit')+'">'+r1(st.rwH)+' h</b> <small>rework remaining</small></div><div><b class="num">'+st.rwFixed.length+'</b> <small>fixed and done</small></div>'+(none?'<div><b class="num" style="color:var(--red)">'+none+'</b> <small>still to be picked</small></div>':'')+'</div>'+
-    '<p class="sub" style="margin:0 0 8px">Returned by QA or the client. Tracked as separate effort: not counted in hours committed, scope change, completed work or sprint health. Rework hours (1, 3 or 5) are picked on the board card and kept in this browser only; nothing is written to Azure DevOps.</p>'+
+    '<p class="sub" style="margin:0 0 8px">Returned by QA or the client. The item\'s shirt size still counts in each developer\'s hours committed. The rework hours (1, 3 or 5) are separate: they are picked on the board card, only feed the red line on the burndown chart, and are kept in this browser only. Nothing is written to Azure DevOps.</p>'+
     (open.length?'<div class="table-wrap"><table class="t"><thead><tr><th>Item</th><th>Owner</th><th>State</th><th>Rework</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="mute" style="margin:0">No test rejected items are open in this sprint.</p>')+'</div>';
 }
 /* ---------- render ---------- */
@@ -1149,7 +1149,7 @@ function render(ds){
       '<div class="kv"><span>Open items</span><b class="num">'+d.open+'</b></div>'+
       '<div class="kv"><span>No effort set</span><b class="num '+(d.noEff?'red':'')+'">'+d.noEff+'</b></div>'+
       '<div class="kv"><span>Critical or P1 open</span><b class="num '+(d.crit?'red':'')+'">'+d.crit+'</b></div>'+
-      (S.F.rej?'<div class="kv"><span>Test rejected (rework)</span><b class="num '+(d.rw?'red':'')+'">'+(d.rw?d.rw+' · '+r1(d.rwH)+' h':'0')+'</b></div>':'')+'</button>';
+      (S.F.rej?'<div class="kv"><span>Test rejected (burndown only)</span><b class="num '+(d.rw?'red':'')+'">'+(d.rw?d.rw+' · '+r1(d.rwH)+' h':'0')+'</b></div>':'')+'</button>';
   }).join('');
   const noteBits=[];if(st.unassigned)noteBits.push(st.unassigned+' unassigned');if(st.other)noteBits.push(st.other+' with people outside the developer list');
   const okHdr=finished?'Health at close':'Sprint health';
@@ -1493,7 +1493,7 @@ function render(){
   const lanes=D.lanesFor(SB.list(cfg.boardTypes));
   mine.forEach(i=>{if(!D.laneOf(i,lanes))lanes.push({key:i.state,label:i.state,cat:i.cat,rank:1,i:99,types:[i.type]})});
   cur.lanes=lanes;
-  const hours=mine.reduce((s,i)=>s+i.hours,0),noEff=mine.filter(i=>!i.rej&&!(i.hours>0)).length;
+  const hours=mine.reduce((s,i)=>s+i.hours,0),noEff=mine.filter(i=>!(i.hours>0)).length;
   const rw=mine.filter(i=>i.rej&&i.open),rwH=rw.reduce((s,i)=>s+i.rwHours,0);
   const wk=mondayOf(info&&info.finish<now?info.finish:now);
   const doneWk=mine.filter(i=>i.done&&i.sc&&i.sc>=wk);
@@ -1508,7 +1508,7 @@ function render(){
   const stats='<div class="stats">'+
     '<div class="stat '+hc+'"><b class="num">'+r1(hours)+' / '+cfg.target+' h</b><span>Hours committed</span><div class="meter '+hc+'"><i style="width:'+Math.min(100,100*hours/cap)+'%"></i><span class="mk" style="left:'+(100*cfg.target/cap)+'%"></span></div></div>'+
     '<div class="stat '+(noEff?'red':'')+'"><b class="num">'+noEff+'</b><span>Items with no effort</span></div>'+
-    (S.F.rej?'<div class="stat '+(rw.length?'red':'')+'" title="Returned by QA or the client. Separate effort, not counted in hours committed."><b class="num">'+rw.length+(rw.length?' · '+r1(rwH)+' h':'')+'</b><span>Test rejected rework (not in committed)</span></div>':'')+
+    (S.F.rej?'<div class="stat '+(rw.length?'red':'')+'" title="Returned by QA or the client. The item\'s shirt size counts in hours committed. Rework hours only show on the burndown chart."><b class="num">'+rw.length+(rw.length?' · '+r1(rwH)+' h':'')+'</b><span>Test rejected rework (burndown only)</span></div>':'')+
     '<div class="stat"><b class="num">'+doneWk.length+'</b><span>Done this week ('+r1(doneWk.reduce((s,i)=>s+i.hours,0))+' h)</span></div>'+
     '<div class="stat '+(crit?'red':'')+'"><b class="num">'+crit+'</b><span>Critical or P1 open</span></div>'+
     '<div class="stat '+(overdue?'red':(dueToday?'amber':''))+'"><b class="num">'+dueToday+' / '+overdue+'</b><span>Due today / overdue</span></div>'+
