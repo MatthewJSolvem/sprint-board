@@ -19,6 +19,14 @@ Bugs and tasks have a boolean field called **Test Rejected**. When it is true, Q
 - The item's own shirt size counts in the developer's hours committed like any other item. The 1 / 3 / 5 h rework pick is separate: it only feeds the red burndown line and is never added to committed hours.
 - The 1 / 3 / 5 h picks are kept in the browser only (local storage). **Nothing is written to Azure DevOps for them.** Other people and other browsers do not see them.
 
+## Due date on Kanban cards
+Each open card shows the Azure DevOps **Due Date** as a coloured stripe on its left edge and a chip next to the age:
+- **Red**: overdue ("Overdue 3 d").
+- **Amber**: due today or tomorrow.
+- **Green**: due later ("Due 28 Nov").
+- **Grey, dashed**: no due date set.
+Finished cards stay neutral and only show the plain date, so a Done card never looks overdue. Hover the chip for the full date. The stripe sits inside the card, so it does not clash with the red border on Test rejected cards. Card order in each lane is unchanged. Read-only: nothing is written to Azure DevOps for this.
+
 ## Notes and dependencies on cards
 Each Kanban card has an icon: grey = has a note, amber = waiting on another developer, red = overdue (waiting longer than the stuck days, promised date passed, or the linked item is blocked), green = dependency cleared. The developer being waited on sees an "others are waiting" icon on the linked card.
 Everything is stored in Azure DevOps so it is visible there too:
