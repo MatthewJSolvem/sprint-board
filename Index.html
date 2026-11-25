@@ -1545,7 +1545,7 @@ function render(){
     its.sort((a,b)=>l.cat==='Completed'?((b.sc||0)-(a.sc||0)):(((b.rej?1:0)-(a.rej?1:0))||(b.critical-a.critical)||((a.pri||9)-(b.pri||9))||b.age-a.age));
     return '<div class="lane c-'+l.cat+'" data-lane="'+esc(l.key)+'"><div class="lh"><b>'+esc(l.label)+'</b><span class="ct num">'+its.length+'</span></div><div class="cards">'+its.map(card).join('')+'</div></div>';
   }).join('');
-  $('#bdBody').innerHTML=head+(mine.length?'':'<div class="banner">Nothing is assigned to '+esc(cur.dev)+' in this sprint.</div>')+'<div class="duelg" aria-label="Due date colours"><span>Due date:</span><i><span class="dot red"></span>Overdue</i><i><span class="dot amber"></span>Today or tomorrow</i><i><span class="dot green"></span>Later</i><i><span class="dot dashed"></span>No due date</i><i>Done items stay neutral</i></div><div class="kan" id="kan">'+cols+'</div>';
+  $('#bdBody').innerHTML=head+(mine.length?'':'<div class="banner">Nothing is assigned to '+esc(cur.dev)+' in this sprint.</div>')+'<div class="duelg" aria-label="Due date colours"><span>Due date:</span><i><span class="dot red"></span>Overdue</i><i><span class="dot amber"></span>Today or tomorrow</i><i><span class="dot green"></span>Later</i><i><span class="dot dashed"></span>No due date</i><i>Done items stay neutral</i><i style="margin-left:auto;opacity:.7" title="If you can see this, the due-date version of the board is loaded">Due-date build 25 Nov</i></div><div class="kan" id="kan">'+cols+'</div>';
 }
 
 /* ---------- actions ---------- */
